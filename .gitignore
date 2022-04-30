@@ -13,3 +13,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+set-env-vars.sh
+isp-block-checker
+top-1m.csv
