@@ -1,7 +1,12 @@
 # is-your-isp-blocking-you
 A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 
-# ToDo :
+## Architecture
+![images/is-your-isp-blocking-you.png](./images/is-your-isp-blocking-you.png)
+
+## Screenshots
+![scan-stats-db](./images/scan-stats-db.png)
+## ToDo :
 - [ ] Keep unique domains in the list to scan and remove subdomains - Try to get this to max 100k domains
 - [ ] Create this as a CLI tool. See bubble tea golang lib.
 - [ ] d3.js or some other tool to create a heat map

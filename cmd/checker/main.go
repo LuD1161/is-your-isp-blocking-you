@@ -56,10 +56,10 @@ func main() {
 		panic(err.Error())
 	}
 	defer dbn.Close()
-	db.AutoMigrate(&models.Record{})
+	db.AutoMigrate(&models.Record{}, &models.ScanStats{})
 
 	records, err := helpers.ReadCsvFile("top-1m.csv")
-	records = records[:100000] // TODO: Change this
+	records = records[:10000] // TODO: Change this
 	if err != nil {
 		log.Fatal().Msg("Error in reading csv file")
 	}
@@ -92,7 +92,7 @@ func main() {
 	}()
 
 	results := make([]models.Record, 0)
-	accessible, inaccessible, blocked, unknown_host := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
+	accessible, inaccessible, blocked, unknownHost, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
 	for i := 0; i < len(urls); i++ {
 		result := <-resultsChan
 		record := models.Record{
@@ -101,14 +101,14 @@ func main() {
 			Country:    "India",
 			Location:   "Bangalore",
 			Accessible: false,
-			Err_msg:    "",
+			ErrMsg:     "",
 		}
 		if result.Error != nil {
 			if i%10000 == 0 {
 				log.Info().Msgf("✅ URLs done : %d", i)
 				log.Error().Msgf("Error : %s", result.Error.Error())
 			}
-			record.Err_msg = result.Error.Error()
+			record.ErrMsg = result.Error.Error()
 		}
 		switch result.Code {
 		case constants.CONN_RESET:
@@ -122,8 +122,10 @@ func main() {
 		case constants.CONN_UNKNOWN:
 			inaccessible = append(inaccessible, result.URL)
 			// fmt.Printf("✅ All good. %s", record)
-		case constants.NO_SUCH_HOST, constants.CONN_TIMEOUT:
-			unknown_host = append(unknown_host, result.URL)
+		case constants.NO_SUCH_HOST:
+			unknownHost = append(unknownHost, result.URL)
+		case constants.CONN_TIMEOUT:
+			timedOut = append(timedOut, result.URL)
 		default:
 			log.Error().Msgf("default case : %+v", result)
 		}
@@ -137,13 +139,45 @@ func main() {
 	if err != nil {
 		log.Error().Msgf("Error inserting into DB %s", err.Error())
 	}
+
+	scanTime := int(time.Since(start).Seconds()) // total seconds to complete the scan
+	scanStats := &models.ScanStats{
+		Model:                gorm.Model{},
+		ScanTime:             scanTime,
+		UniqueDomainsScanned: len(urls),
+		Accessible:           len(accessible),
+		Inaccessible:         len(inaccessible),
+		Blocked:              len(blocked),
+		TimedOut:             len(timedOut),
+		UnknownHost:          len(unknownHost),
+		ISP:                  "airtel",
+		Country:              "India",
+		Location:             "Bengaluru",
+		EvilISP:              false,
+	}
+
+	if len(blocked) > 0 {
+		scanStats.EvilISP = true
+	}
+
+	statsPSQLInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", "localhost", 5432, "postgres", "postgres", "scan_stats")
+	scan_db, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: dbn,
+		DSN:  statsPSQLInfo,
+	}), &gorm.Config{})
+	scan_dbn, err := scan_db.DB()
+	if err != nil {
+		panic(err.Error())
+	}
+	scan_db.Create(&scanStats)
+	defer scan_dbn.Close()
 	// close channels
 	close(urlsChan)
 	close(resultsChan)
 
 	if len(inaccessible) > 0 {
 		log.Info().Msg("🚨 Evil ISP involved.")
-		log.Info().Msgf("Websites :\ninaccessible : %d\nblocked : %d\naccessible : %d\nunknown_host : %d", len(inaccessible), len(blocked), len(accessible), len(unknown_host))
+		log.Info().Msgf("Websites :\nunique : %d\ninaccessible : %d\nblocked : %d\naccessible : %d\nunknownHost : %d\ntimedOut : %d\n", len(urls), len(inaccessible), len(blocked), len(accessible), len(unknownHost), len(timedOut))
 		// fmt.Printf("Websites inaccessible : %v\n", inaccessible)
 		// fmt.Printf("Websites blocked : %v\n", blocked)
 		// fmt.Printf("Websites accessible : %v\n", accessible)
