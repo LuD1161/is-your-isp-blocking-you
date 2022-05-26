@@ -109,6 +109,10 @@ func main() {
 				log.Error().Msgf("Error : %s", result.Error.Error())
 			}
 			record.ErrMsg = result.Error.Error()
+			// truncate error message to avoid sql errors
+			if len(record.ErrMsg) > 1024 {
+				record.ErrMsg = record.ErrMsg[:1024] // max length of the column
+			}
 		}
 		switch result.Code {
 		case constants.CONN_RESET:

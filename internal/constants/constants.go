@@ -8,4 +8,8 @@ const (
 	CONN_UNKNOWN = 500
 	CONN_TIMEOUT = 501
 	NO_SUCH_HOST = 404
+
+	// HTTP Client Constants
+	MAX_RETRIES         = 3
+	HTTP_CLIENT_TIMEOUT = 5
 )

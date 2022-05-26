@@ -11,7 +11,7 @@ type Record struct {
 	Country    string `gorm:"size:255;not null;" json:"country"`
 	Location   string `gorm:"size:255;not null;" json:"location"`
 	Accessible bool   `gorm:"not null;" json:"accessible"`
-	ErrMsg     string `gorm:"size:255;" json:"err"`
+	ErrMsg     string `gorm:"size:1024;" json:"err"`
 }
 
 type Result struct {
