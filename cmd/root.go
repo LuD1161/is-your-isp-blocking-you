@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -17,9 +19,10 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var (
-	threads int
-	timeout int
-	rootCmd = &cobra.Command{
+	threads    int
+	timeout    int
+	domainList string
+	rootCmd    = &cobra.Command{
 		Use:   "is-your-isp-blocking-you",
 		Short: "A tool to test if your ISP is blocking your access to some parts of the Internet.",
 		Long:  "This tool tries to get website content for a large number of websites and checks, whether it's accessible or not.",
@@ -48,6 +51,7 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
+	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs','cisco','alexa','others'. Choosing 'others' you need to specify the full path of the list.")
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	log.Logger = log.With().Caller().Logger()
@@ -58,5 +62,14 @@ func init() {
 	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+
+	// Handle exit gracefully
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		log.Info().Msg("Got signal to close the program")
+		os.Exit(0)
+	}()
 
 }
