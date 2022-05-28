@@ -1,18 +1,18 @@
-APP=isp-block-checker
+APP=is-your-isp-blocking-you
 # https://medium.com/the-go-journey/adding-version-information-to-go-binaries-e1b79878f6f2
 GIT_COMMIT=$(shell git rev-parse --short=10 HEAD)
 
 .PHONY: build-and-execute
 build-and-execute:
-	chmod +x ./set-env-vars.sh && . ./set-env-vars.sh && go build -ldflags "-X main.GitCommit=${GIT_COMMIT}" -o ${APP} cmd/checker/main.go && chmod +x ./${APP} && ./${APP}
+	go build -ldflags "-X main.GitCommit=${GIT_COMMIT}" -o ${APP} main.go && chmod +x ./${APP} && ./${APP}
 
 .PHONY: build
 build:
-	go build -o ${APP} cmd/checker/main.go
+	go build -ldflags "-X main.GitCommit=${GIT_COMMIT}" -o ${APP} main.go
 
 .PHONY: run
 run:
-	go run cmd/checker/main.go
+	go run main.go
 
 .PHONY: debug
 debug: 

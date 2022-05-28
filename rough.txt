@@ -1,9 +1,0 @@
-https://animoto-upload-p.s3.amazonaws.com
-https://kidsmanagement-pa.googleapis.com
-https://tfl-go-data.pages.dev
-https://toggl-open-source.github.io
-https://livesupport-app.appspot.com
-https://sdkvideo.s3.amazonaws.com
-https://blogstudio.s3.amazonaws.com
-https://ltlxvxjjmvhn.me
-https://mktg-content-api-hashicorp.vercel.app
