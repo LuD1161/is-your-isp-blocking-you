@@ -1,7 +1,7 @@
 package constants
 
-// Error Code constants
 const (
+	// Error Code constants
 	CONN_OK      = 1
 	CONN_RESET   = 401
 	CONN_BLOCKED = 402
@@ -12,4 +12,7 @@ const (
 	// HTTP Client Constants
 	MAX_RETRIES         = 3
 	HTTP_CLIENT_TIMEOUT = 5
+
+	// Program constants
+	MAX_GOROUTINES = 1000
 )

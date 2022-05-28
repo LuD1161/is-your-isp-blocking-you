@@ -58,6 +58,7 @@ func Unzip(filePath string) error {
 func MakeRequest(urlsChan <-chan string, resultsChan chan<- models.Result) {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = constants.MAX_RETRIES
+	retryClient.Logger = nil // Don't want to log anything here
 
 	client := retryClient.StandardClient() // *http.Client
 	client.Timeout = constants.HTTP_CLIENT_TIMEOUT * time.Second

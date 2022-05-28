@@ -32,14 +32,13 @@ func main() {
 	// Create a TLD extractor
 	cache := "/tmp/tld.cache"
 	extract, _ := tldextract.New(cache, false)
-	// Download zip file
+	// Download the latest zip file
 	// http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip
 	// top_1M_csv_zip := "http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip"
 	// if helpers.DownloadPackage(top_1M_csv_zip, "/tmp/top-1m.csv.zip") != nil {
 	// 	return
 	// }
 	// helpers.Unzip("/tmp/top-1m.csv.zip")
-	maxGoroutines := 1000
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -51,6 +50,10 @@ func main() {
 	start := time.Now()
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", "localhost", 5432, "postgres", "postgres", "site_checker")
 	db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+	if err != nil {
+		log.Error().Msgf("Can't open DB connection : %s", err.Error())
+		panic(err.Error())
+	}
 	dbn, err := db.DB()
 	if err != nil {
 		panic(err.Error())
@@ -59,7 +62,7 @@ func main() {
 	db.AutoMigrate(&models.Record{}, &models.ScanStats{})
 
 	records, err := helpers.ReadCsvFile("top-1m.csv")
-	records = records[:10000] // TODO: Change this
+	// records = records // TODO: Change this
 	if err != nil {
 		log.Fatal().Msg("Error in reading csv file")
 	}
@@ -68,18 +71,15 @@ func main() {
 	for _, record := range records {
 		result := extract.Extract(record[1])
 		url := result.Root + "." + result.Tld
-		log.Info().Msgf("url : %s", url)
+		log.Debug().Msgf("url : %s", url)
 		urls[url] = true
-		fmt.Printf("%+v;%s\n", result, record[1])
 	}
-	log.Info().Msgf("Unique URLs : %d", len(urls))
-	urlsChan := make(chan string, maxGoroutines)
-	resultsChan := make(chan models.Result)
-	// records = [][]string{
-	// 	{"1", "anonfile.com"}
-	// }
 
-	for i := 0; i < maxGoroutines; i++ {
+	log.Info().Msgf("Unique URLs : %d", len(urls))
+	urlsChan := make(chan string, constants.MAX_GOROUTINES)
+	resultsChan := make(chan models.Result)
+
+	for i := 0; i < constants.MAX_GOROUTINES; i++ {
 		go helpers.MakeRequest(urlsChan, resultsChan)
 	}
 
