@@ -22,3 +22,7 @@ A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 - [ ] Figure out IP and in turn ISP to be inserted into the DB
 - [ ] Give user option in CLI tool to send data to their server
 - [ ] Open source this server
+
+## FAQ :
+1. Why isn't alexa top 1 M included in the list ?
+<br/> Because alexa service is discontinued, as of 1st May 2022, check [here](https://www.alexa.com/topsites). ![](./images/alexa-top-1m-discontinued.png)

@@ -23,12 +23,9 @@ var (
 	timeout    int
 	domainList string
 	rootCmd    = &cobra.Command{
-		Use:   "is-your-isp-blocking-you",
-		Short: "A tool to test if your ISP is blocking your access to some parts of the Internet.",
-		Long:  "This tool tries to get website content for a large number of websites and checks, whether it's accessible or not.",
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
-		},
+		Use:     "is-your-isp-blocking-you",
+		Short:   "A tool to test if your ISP is blocking your access to some parts of the Internet.",
+		Long:    "This tool tries to get website content for a large number of websites and checks, whether it's accessible or not.",
 		Version: "0.1",
 	}
 )
@@ -51,14 +48,16 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
-	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs','cisco','alexa','others'. Choosing 'others' you need to specify the full path of the list.")
+	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs','cisco', 'others'. Choosing 'others' you need to specify the full path of the list.")
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	log.Logger = log.With().Caller().Logger()
-	log.Logger = log.With().Str("version", rootCmd.Version).Logger()
 	switch os.Getenv("LogLevel") {
 	case "Debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Logger = log.With().Caller().Logger()
+		log.Logger = log.With().Str("version", rootCmd.Version).Logger()
+	case "Error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}

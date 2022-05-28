@@ -5,9 +5,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -32,25 +29,10 @@ var getISPCmd = &cobra.Command{
 	Use:   "getISP",
 	Short: "Get current ISP",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://ifconfig.co/json", nil)
+		result, err := GetISP()
 		if err != nil {
-			log.Error().Msgf("Error : %s ", err.Error())
+			log.Fatal().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
 		}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Error().Msgf("Error : %s ", err.Error())
-		}
-		defer resp.Body.Close()
-		bodyText, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Error().Msgf("Error : %s ", err.Error())
-		}
-		var result IfConfigResponse
-		if err := json.Unmarshal(bodyText, &result); err != nil {
-			log.Error().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
-		}
-
 		// Print tabular output
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
