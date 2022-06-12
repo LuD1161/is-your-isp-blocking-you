@@ -46,7 +46,6 @@ var checkBlockingCmd = &cobra.Command{
 			filePath = "data/citizenlabs-lists/lists/global.csv"
 		}
 		records, err := ReadCsvFile(filePath)
-		// records = records // TODO: Change this
 		if err != nil {
 			log.Fatal().Msg("Error in reading csv file")
 		}
@@ -63,9 +62,9 @@ var checkBlockingCmd = &cobra.Command{
 		urlsChan := make(chan string, threads)
 		resultsChan := make(chan Result)
 		start := time.Now()
-
+		proxyTransport := SetProxyTransport()
 		for i := 0; i < threads; i++ {
-			go MakeRequest(urlsChan, resultsChan)
+			go MakeRequest(urlsChan, resultsChan, proxyTransport)
 		}
 
 		go func() {
@@ -121,7 +120,7 @@ var checkBlockingCmd = &cobra.Command{
 			results = append(results, record)
 		}
 		scanTime := int(time.Since(start).Seconds()) // total seconds to complete the scan
-		result, err := GetISP()
+		result, err := GetISP(proxyTransport)
 		if err != nil {
 			log.Fatal().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
 		}

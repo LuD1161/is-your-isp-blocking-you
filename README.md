@@ -23,6 +23,15 @@ A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 - [ ] Give user option in CLI tool to send data to their server
 - [ ] Open source this server
 
+## ToDo CLI :
+- [ ] Add `proxy` support to run checks for different ISPs anywhere in the world.
+- [ ] Based on country automatically choose the list from `citizenlabs`.
+- [ ] When choosing `cisco` list warn people about the bandwidth usage and how much data + time it might consume.
+- [ ] Option to save stats in DB - sqlite, postgres etc.
+- [ ] `debug` option to print all data like which websites were `blocked`, `inaccessible`, `accessible` etc.
+- [ ] Update `README` with the way it is being checked. Mentioning each of the block strategies and how different ISPs are using it. How the tool is checking these ?
+- [ ] Check DNS filtering using `net.LookupIP`
+
 ## FAQ :
 1. Why isn't alexa top 1 M included in the list ?
 <br/> Because alexa service is discontinued, as of 1st May 2022, check [here](https://www.alexa.com/topsites). ![](./images/alexa-top-1m-discontinued.png)

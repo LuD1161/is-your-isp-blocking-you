@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -53,13 +54,14 @@ func Unzip(filePath string) error {
 	return nil
 }
 
-func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result) {
+func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransport *http.Transport) {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = MAX_RETRIES
 	retryClient.Logger = nil // Don't want to log anything here
 
 	client := retryClient.StandardClient() // *http.Client
 	client.Timeout = time.Duration(timeout) * time.Second
+	client.Transport = customTransport
 	for url := range urlsChan {
 		var result Result
 		result.URL = url
@@ -141,8 +143,8 @@ func InsertIntoDB(db *gorm.DB, records []Record) error {
 	return nil
 }
 
-func GetISP() (IfConfigResponse, error) {
-	client := &http.Client{}
+func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
+	client := &http.Client{Transport: customTransport}
 	req, err := http.NewRequest("GET", "https://ifconfig.co/json", nil)
 	if err != nil {
 		log.Error().Msgf("Error : %s ", err.Error())
@@ -159,4 +161,20 @@ func GetISP() (IfConfigResponse, error) {
 	var result IfConfigResponse
 	err = json.Unmarshal(bodyText, &result)
 	return result, err
+}
+
+func SetProxyTransport() (proxyTransport *http.Transport) {
+	// create proxy transport
+	if proxyUrl != "" {
+		proxy, err := url.Parse(proxyUrl)
+		if err != nil {
+			log.Error().Msgf("Error in parsing proxyUrl, going with no proxy : %s", err.Error())
+		}
+		proxyTransport = &http.Transport{Proxy: http.ProxyURL(proxy)}
+		log.Info().Msgf("proxy transport created : %s", proxyUrl)
+	} else {
+		log.Info().Msgf("No proxy transport created : %s", proxyUrl)
+		proxyTransport = &http.Transport{}
+	}
+	return proxyTransport
 }

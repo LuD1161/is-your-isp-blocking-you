@@ -29,7 +29,8 @@ var getISPCmd = &cobra.Command{
 	Use:   "getISP",
 	Short: "Get current ISP",
 	Run: func(cmd *cobra.Command, args []string) {
-		result, err := GetISP()
+		proxyTransport := SetProxyTransport()
+		result, err := GetISP(proxyTransport)
 		if err != nil {
 			log.Fatal().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
 		}
