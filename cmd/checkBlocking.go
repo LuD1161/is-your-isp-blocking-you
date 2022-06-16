@@ -63,6 +63,7 @@ var checkBlockingCmd = &cobra.Command{
 		resultsChan := make(chan Result)
 		start := time.Now()
 		proxyTransport := SetProxyTransport()
+		log.Info().Msgf("Started scan with ID : %s", scanId)
 		for i := 0; i < threads; i++ {
 			go MakeRequest(urlsChan, resultsChan, proxyTransport)
 		}
@@ -92,6 +93,7 @@ var checkBlockingCmd = &cobra.Command{
 					log.Debug().Msgf("✅ URLs done : %d", i)
 					log.Error().Msgf("Error : %s", result.Error.Error())
 				}
+				record.ScanId = scanId
 				record.ErrMsg = result.Error.Error()
 				// truncate error message to avoid sql errors
 				if len(record.ErrMsg) > 1024 {
@@ -138,7 +140,10 @@ var checkBlockingCmd = &cobra.Command{
 			Location:             result.City,
 			EvilISP:              false,
 		}
-
+		// this will save the results to DB if db_url is passed
+		if err := saveInDB(results, scanStats); err != nil {
+			log.Error().Stack().Err(err).Msgf("Error saving results in DB : %s", err.Error())
+		}
 		if len(blocked) > 0 {
 			scanStats.EvilISP = true
 		}

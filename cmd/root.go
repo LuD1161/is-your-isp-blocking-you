@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/spf13/cobra"
 )
@@ -22,7 +24,9 @@ var (
 	threads    int
 	timeout    int
 	domainList string
-	proxyUrl   string
+	proxyURL   string
+	storeInDB  string
+	scanId     = fmt.Sprintf("%d-%s", time.Now().Unix(), GenerateRandomString(10))
 	rootCmd    = &cobra.Command{
 		Use:     "is-your-isp-blocking-you",
 		Short:   "A tool to test if your ISP is blocking your access to some parts of the Internet.",
@@ -50,15 +54,18 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
 	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs','cisco', 'others'. Choosing 'others' you need to specify the full path of the list.")
-	rootCmd.PersistentFlags().StringVarP(&proxyUrl, "proxy_url", "p", "", "Proxy URL to pass traffic through. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through it. This is useful, when you want to test blocking on another ISP/country etc.")
+	rootCmd.PersistentFlags().StringVarP(&proxyURL, "proxy_url", "p", "", "Proxy URL to pass traffic through. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through it. This is useful, when you want to test blocking on another ISP/country etc.")
+	rootCmd.PersistentFlags().StringVarP(&storeInDB, "store_in_db", "d", "", "If you want to save the results to db pass in the DB type. Valid choices : 'postgres', 'sqlite', 'mysql'. Also make sure to populate the `set-env-vars.sh` file with the respective env vars for the db.")
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	switch os.Getenv("LogLevel") {
 	case "Debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Logger = log.With().Caller().Logger()
+		log.Logger = log.With().Timestamp().Stack().Caller().Logger()
 		log.Logger = log.With().Str("version", rootCmd.Version).Logger()
 	case "Error":
+		log.Logger = log.With().Timestamp().Stack().Caller().Logger()
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)

@@ -4,8 +4,10 @@ import (
 	"archive/zip"
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -165,16 +168,56 @@ func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
 
 func SetProxyTransport() (proxyTransport *http.Transport) {
 	// create proxy transport
-	if proxyUrl != "" {
-		proxy, err := url.Parse(proxyUrl)
+	if proxyURL != "" {
+		proxy, err := url.Parse(proxyURL)
 		if err != nil {
 			log.Error().Msgf("Error in parsing proxyUrl, going with no proxy : %s", err.Error())
 		}
 		proxyTransport = &http.Transport{Proxy: http.ProxyURL(proxy)}
-		log.Info().Msgf("proxy transport created : %s", proxyUrl)
+		log.Info().Msgf("proxy transport created : %s", proxyURL)
 	} else {
-		log.Info().Msgf("No proxy transport created : %s", proxyUrl)
+		log.Info().Msgf("No proxy transport created : %s", proxyURL)
 		proxyTransport = &http.Transport{}
 	}
 	return proxyTransport
+}
+
+func GenerateRandomString(length int) string {
+	rand.Seed(time.Now().UnixNano())
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func saveInDB(results []Record, scanStats ScanStats) error {
+	switch storeInDB {
+	case "postgres":
+		psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", "localhost", 5432, "postgres", "postgres", "site_checker_2")
+		db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+		if err != nil {
+			log.Error().Msgf("Can't open DB connection : %s", err.Error())
+			panic(err.Error())
+		}
+		dbn, err := db.DB()
+		if err != nil {
+			panic(err.Error())
+		}
+		defer dbn.Close()
+		db.AutoMigrate(Record{}, ScanStats{})
+		if err := db.CreateInBatches(results, 1000).Error; err != nil {
+			log.Error().Stack().Err(err).Msgf("Error saving results in DB [CreateInBatches] : %s", err.Error())
+			return err
+		}
+		// Create scan stats
+		db.Create(&scanStats)
+	case "sqlite":
+	case "mysql":
+	default:
+		fmt.Println("sqlite & mysql are WIP. Please try with 'postgres'")
+
+	}
+	return nil
 }

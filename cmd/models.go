@@ -6,6 +6,7 @@ import (
 
 type Record struct {
 	gorm.Model
+	ScanId     string `gorm:"size:255;not null;" json:"scan_id"`
 	Website    string `gorm:"size:255;not null;" json:"website"`
 	ISP        string `gorm:"size:255;not null;" json:"isp"`
 	Country    string `gorm:"size:255;not null;" json:"country"`
@@ -22,6 +23,7 @@ type Result struct {
 
 type ScanStats struct {
 	gorm.Model
+	ScanId               string `gorm:"size:255;not null;" json:"scan_id"`
 	ScanTime             int    `gorm:"column:scan_time;int;not null;" json:"scan_time"`
 	UniqueDomainsScanned int    `gorm:"int;not null;" json:"unique_domains_scanned"`
 	Accessible           int    `gorm:"int;not null;" json:"accessible"`
