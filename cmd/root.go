@@ -53,7 +53,7 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
-	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs','cisco', 'others'. Choosing 'others' you need to specify the full path of the list.")
+	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs', 'cisco', '<file_path>'. Either choose from 'citizenlabs', 'cisco' or specify the full path of your domain list. The first column of the domain list should contain the domain. Check data/sample_custom_domain_list.txt , for example.")
 	rootCmd.PersistentFlags().StringVarP(&proxyURL, "proxy_url", "p", "", "Proxy URL to pass traffic through. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through it. This is useful, when you want to test blocking on another ISP/country etc.")
 	rootCmd.PersistentFlags().StringVarP(&storeInDB, "store_in_db", "d", "", "If you want to save the results to db pass in the DB type. Valid choices : 'postgres', 'sqlite', 'mysql'. Also make sure to populate the `set-env-vars.sh` file with the respective env vars for the db.")
 

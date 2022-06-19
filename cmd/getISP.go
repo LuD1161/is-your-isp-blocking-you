@@ -16,6 +16,7 @@ import (
 type IfConfigResponse struct {
 	IP         string  `json:"ip"`
 	Country    string  `json:"country"`
+	CountryISO string  `json:"country_iso"`
 	RegionName string  `json:"region_name"`
 	ZipCode    string  `json:"zip_code"`
 	City       string  `json:"city"`

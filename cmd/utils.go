@@ -74,6 +74,7 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 			result.Error = err
 			result.Code = CONN_UNKNOWN
 			if strings.Contains(err.Error(), "connection reset by peer") {
+				log.Debug().Msgf("URL : %s | Error : %+v", url, err)
 				result.Code = CONN_RESET
 			}
 			if strings.Contains(err.Error(), "no such hostError") {
@@ -138,12 +139,6 @@ func ReadCsvFile(filePath string) ([][]string, error) {
 		}
 		rows = append(rows, row)
 	}
-}
-
-func InsertIntoDB(db *gorm.DB, records []Record) error {
-	// db.Create
-	// db.CreateInBatches(records, 1000)
-	return nil
 }
 
 func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
@@ -216,7 +211,9 @@ func saveInDB(results []Record, scanStats ScanStats) error {
 	case "sqlite":
 	case "mysql":
 	default:
-		fmt.Println("sqlite & mysql are WIP. Please try with 'postgres'")
+		if storeInDB != "" {
+			fmt.Println("sqlite & mysql are WIP. Please try with 'postgres'")
+		}
 
 	}
 	return nil

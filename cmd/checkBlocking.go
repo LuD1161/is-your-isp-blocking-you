@@ -28,6 +28,14 @@ var checkBlockingCmd = &cobra.Command{
 
 		var filePath string
 		var columnNumber int // column number where domain exists in csv file
+
+		// Get ISP first, to get the country
+		proxyTransport := SetProxyTransport()
+		ispResult, err := GetISP(proxyTransport)
+		if err != nil {
+			log.Fatal().Msgf("Error getting ISP data. Probably internet not connected or ifconfig.co is blocked ( unlikely, check this in your browser or terminal ).")
+		}
+
 		switch domainList {
 		case "citizenlabs":
 			filePath = "data/citizenlabs-lists/lists/global.csv"
@@ -35,15 +43,20 @@ var checkBlockingCmd = &cobra.Command{
 		case "cisco":
 			filePath = "data/cisco.csv"
 			columnNumber = 1
-		case "others":
+		default:
 			filePath = domainList
 			// check if file exists
 			if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-				log.Fatal().Msgf("File does not exists : %s", domainList)
+				// Get country specific citizenlabs' list
+				countrySpecificList := fmt.Sprintf("data/citizenlabs-lists/lists/%s.csv", ispResult.CountryISO)
+				log.Error().Msgf("User specified file does not exists : %s\nSwitching to country ( %s ) specific list : %s", domainList, ispResult.Country, countrySpecificList)
+				filePath = countrySpecificList
+				if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+					filePath = "data/citizenlabs-lists/lists/global.csv"
+					log.Error().Msgf("Couldn't find country specific list ( %s ). Using global list - %s", countrySpecificList, filePath)
+				}
 			}
 			columnNumber = 0
-		default:
-			filePath = "data/citizenlabs-lists/lists/global.csv"
 		}
 		records, err := ReadCsvFile(filePath)
 		if err != nil {
@@ -58,11 +71,10 @@ var checkBlockingCmd = &cobra.Command{
 			urls[url] = true
 		}
 
-		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", domainList, len(urls), threads)
+		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", filePath, len(urls), threads)
 		urlsChan := make(chan string, threads)
 		resultsChan := make(chan Result)
 		start := time.Now()
-		proxyTransport := SetProxyTransport()
 		log.Info().Msgf("Started scan with ID : %s", scanId)
 		for i := 0; i < threads; i++ {
 			go MakeRequest(urlsChan, resultsChan, proxyTransport)
@@ -122,9 +134,12 @@ var checkBlockingCmd = &cobra.Command{
 			results = append(results, record)
 		}
 		scanTime := int(time.Since(start).Seconds()) // total seconds to complete the scan
-		result, err := GetISP(proxyTransport)
 		if err != nil {
 			log.Fatal().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
+		}
+		evilISP := false
+		if len(blocked) > 0 {
+			evilISP = true
 		}
 		scanStats := ScanStats{
 			Model:                gorm.Model{},
@@ -135,10 +150,12 @@ var checkBlockingCmd = &cobra.Command{
 			Blocked:              len(blocked),
 			TimedOut:             len(timedOut),
 			UnknownHost:          len(unknownHost),
-			ISP:                  result.AsnOrg,
-			Country:              result.Country,
-			Location:             result.City,
-			EvilISP:              false,
+			ISP:                  ispResult.AsnOrg,
+			Country:              ispResult.Country,
+			Location:             ispResult.City,
+			Longitude:            ispResult.Longitude,
+			Latitude:             ispResult.Latitude,
+			EvilISP:              evilISP,
 		}
 		// this will save the results to DB if db_url is passed
 		if err := saveInDB(results, scanStats); err != nil {
@@ -147,22 +164,27 @@ var checkBlockingCmd = &cobra.Command{
 		if len(blocked) > 0 {
 			scanStats.EvilISP = true
 		}
+		// ToDo : Change this to dependent on a CLI flag
+		if os.Getenv("LogLevel") == "Debug" {
+			fmt.Printf("blocked URLs : %s\n", blocked)
+			fmt.Printf("Inaccessible URLs : %s\n", inaccessible)
+		}
 		close(urlsChan)
 		close(resultsChan)
 		// Print tabular output
-		printTable(scanTime, result, scanStats)
+		printTable(scanTime, ispResult, scanStats, filePath)
 	},
 }
 
-func printTable(scanTime int, result IfConfigResponse, scanStats ScanStats) {
+func printTable(scanTime int, result IfConfigResponse, scanStats ScanStats, filePath string) {
 	// Print ISP details
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.StyleLight)
 	t.SetTitle("Current ISP Details")
-	t.AppendHeader(table.Row{"Scan Time", "Country", "IP", "ISP", "Region", "City"})
+	t.AppendHeader(table.Row{"Scan Time", "Country", "IP", "ISP", "Region", "City", "Lat", "Lon"})
 	t.AppendRows([]table.Row{
-		{fmt.Sprintf("%d seconds", scanTime), result.Country, result.IP, result.AsnOrg, result.RegionName, result.City},
+		{fmt.Sprintf("%d seconds", scanTime), result.Country, result.IP, result.AsnOrg, result.RegionName, result.City, result.Latitude, result.Longitude},
 	})
 	t.AppendSeparator()
 	t.Render()
@@ -171,7 +193,7 @@ func printTable(scanTime int, result IfConfigResponse, scanStats ScanStats) {
 	t = table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.StyleLight)
-	t.SetTitle(fmt.Sprintf("Current Scan Data | Domain List : %s", domainList))
+	t.SetTitle(fmt.Sprintf("Current Scan Data | Domain List : %s", filePath))
 	t.AppendHeader(table.Row{"Unique Domains", "Accessible", "Inaccessible", "Blocked", "Timed Out", "Unknown Host", "Good ISP"})
 	evilISP := "✅"
 	if scanStats.EvilISP {
