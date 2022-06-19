@@ -21,13 +21,13 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var (
-	threads    int
-	timeout    int
-	domainList string
-	proxyURL   string
-	storeInDB  string
-	scanId     = fmt.Sprintf("%d-%s", time.Now().Unix(), GenerateRandomString(10))
-	rootCmd    = &cobra.Command{
+	threads         int
+	timeout         int
+	domainList      string
+	runThroughProxy bool
+	storeInDB       string
+	scanId          = fmt.Sprintf("%d-%s", time.Now().Unix(), GenerateRandomString(10))
+	rootCmd         = &cobra.Command{
 		Use:     "is-your-isp-blocking-you",
 		Short:   "A tool to test if your ISP is blocking your access to some parts of the Internet.",
 		Long:    "This tool tries to get website content for a large number of websites and checks, whether it's accessible or not.",
@@ -54,8 +54,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
 	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs', 'cisco', '<file_path>'. Either choose from 'citizenlabs', 'cisco' or specify the full path of your domain list. The first column of the domain list should contain the domain. Check data/sample_custom_domain_list.txt , for example.")
-	rootCmd.PersistentFlags().StringVarP(&proxyURL, "proxy_url", "p", "", "Proxy URL to pass traffic through. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through it. This is useful, when you want to test blocking on another ISP/country etc.")
-	rootCmd.PersistentFlags().StringVarP(&storeInDB, "store_in_db", "d", "", "If you want to save the results to db pass in the DB type. Valid choices : 'postgres', 'sqlite', 'mysql'. Also make sure to populate the `set-env-vars.sh` file with the respective env vars for the db.")
+	rootCmd.PersistentFlags().BoolVarP(&runThroughProxy, "run_through_proxy", "p", false, "Proxy URL to pass traffic through. Set the PROXY_URL env var, you can set in set-env-vars.sh file. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through this proxy. This is useful, when you want to test blocking on another ISP/country etc.")
+	rootCmd.PersistentFlags().StringVarP(&storeInDB, "store_in_db", "d", "sqlite", "If you want to save the results to db pass in the DB type. Valid choices : 'postgres', 'sqlite', 'mysql'. Also make sure to populate the `set-env-vars.sh` file with the respective env vars for the db.")
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack

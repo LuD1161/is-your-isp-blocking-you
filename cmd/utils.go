@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -161,18 +162,21 @@ func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
 	return result, err
 }
 
-func SetProxyTransport() (proxyTransport *http.Transport) {
+func SetProxyTransport() *http.Transport {
 	// create proxy transport
-	if proxyURL != "" {
-		proxy, err := url.Parse(proxyURL)
-		if err != nil {
-			log.Error().Msgf("Error in parsing proxyUrl, going with no proxy : %s", err.Error())
+	proxyURL := os.Getenv("PROXY_URL")
+	proxyTransport := &http.Transport{}
+	if runThroughProxy {
+		if proxyURL != "" {
+			proxy, err := url.Parse(proxyURL)
+			if err != nil {
+				log.Error().Msgf("Error in parsing PROXY_URL from env vars, going with no proxy : %s", err.Error())
+			}
+			proxyTransport.Proxy = http.ProxyURL(proxy)
+			log.Info().Msgf("Proxy set in http.transport : %s", proxyURL)
 		}
-		proxyTransport = &http.Transport{Proxy: http.ProxyURL(proxy)}
-		log.Info().Msgf("proxy transport created : %s", proxyURL)
 	} else {
-		log.Info().Msgf("No proxy transport created : %s", proxyURL)
-		proxyTransport = &http.Transport{}
+		log.Info().Msgf("No PROXY_URL specified. Hence, no proxy set in http.transport created.")
 	}
 	return proxyTransport
 }
@@ -190,8 +194,11 @@ func GenerateRandomString(length int) string {
 func saveInDB(results []Record, scanStats ScanStats) error {
 	switch storeInDB {
 	case "postgres":
-		psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", "localhost", 5432, "postgres", "postgres", "site_checker_2")
-		db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+		postgresDSN := os.Getenv("POSTGRES_DSN")
+		if postgresDSN == "" {
+			return errors.New("POSTGRES_DSN not specified")
+		}
+		db, err := gorm.Open(postgres.Open(postgresDSN), &gorm.Config{})
 		if err != nil {
 			log.Error().Msgf("Can't open DB connection : %s", err.Error())
 			panic(err.Error())
