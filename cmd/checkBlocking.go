@@ -49,7 +49,7 @@ var checkBlockingCmd = &cobra.Command{
 			if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
 				// Get country specific citizenlabs' list
 				countrySpecificList := fmt.Sprintf("data/citizenlabs-lists/lists/%s.csv", ispResult.CountryISO)
-				log.Error().Msgf("User specified file does not exists : %s\nSwitching to country ( %s ) specific list : %s", domainList, ispResult.Country, countrySpecificList)
+				log.Error().Msgf("User specified file does not exists : %s. Switching to country ( %s ) specific list : %s", domainList, ispResult.Country, countrySpecificList)
 				filePath = countrySpecificList
 				if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
 					filePath = "data/citizenlabs-lists/lists/global.csv"
@@ -82,7 +82,7 @@ var checkBlockingCmd = &cobra.Command{
 
 		go func() {
 			for url := range urls {
-				url := fmt.Sprintf("https://%s", url)
+				url := fmt.Sprintf("http://%s", url)
 				log.Debug().Msgf("Working on URL : %s", url)
 				urlsChan <- url
 			}
@@ -150,6 +150,7 @@ var checkBlockingCmd = &cobra.Command{
 		}
 		scanStats := ScanStats{
 			Model:                gorm.Model{},
+			ScanId:               scanId,
 			ScanTime:             scanTime,
 			UniqueDomainsScanned: len(urls),
 			Accessible:           len(accessible),
@@ -160,11 +161,12 @@ var checkBlockingCmd = &cobra.Command{
 			ISP:                  ispResult.AsnOrg,
 			Country:              ispResult.Country,
 			Location:             ispResult.City,
-			Longitude:            ispResult.Longitude,
 			Latitude:             ispResult.Latitude,
+			Longitude:            ispResult.Longitude,
+			DomainList:           filePath,
 			EvilISP:              evilISP,
 		}
-		db, err := initialiseDB(storeInDB)
+		db, err := initialiseDB(storeInDB, scanId)
 		if err != nil {
 			log.Error().Stack().Err(err).Msgf("Error initialising DB : %s", err.Error())
 		} else if db != nil {

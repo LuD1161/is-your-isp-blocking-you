@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/zip"
+	"crypto/tls"
 	b64 "encoding/base64"
 	"encoding/csv"
 	"encoding/json"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/html"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -62,12 +64,14 @@ func Unzip(filePath string) error {
 
 func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransport *http.Transport) {
 	retryClient := retryablehttp.NewClient()
+	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	retryClient.HTTPClient.Transport = customTransport
+	retryClient.HTTPClient.Timeout = time.Duration(timeout) * time.Second
 	retryClient.RetryMax = MAX_RETRIES
 	retryClient.Logger = nil // Don't want to log anything here
 
 	client := retryClient.StandardClient() // *http.Client
-	client.Timeout = time.Duration(timeout) * time.Second
-	client.Transport = customTransport
+	// client.Timeout = time.Duration(timeout) * time.Second
 	for url := range urlsChan {
 		result := Result{
 			Code:           -1,
@@ -78,7 +82,15 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 			HTMLBodyLength: -1,
 			Error:          nil,
 		}
-		resp, err := client.Get(url)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			result.Error = err
+			result.Code = CONN_UNKNOWN
+			log.Debug().Msgf("URL : %s | Error : %+v", url, err)
+			continue
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0")
+		resp, err := client.Do(req)
 		if err != nil {
 			result.Error = err
 			result.Code = CONN_UNKNOWN
@@ -86,7 +98,7 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 				log.Debug().Msgf("URL : %s | Error : %+v", url, err)
 				result.Code = CONN_RESET
 			}
-			if strings.Contains(err.Error(), "no such hostError") {
+			if strings.Contains(err.Error(), "no such host") {
 				result.Code = NO_SUCH_HOST
 			}
 			if err, ok := err.(net.Error); ok && err.Timeout() {
@@ -97,8 +109,9 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 		}
 		result.HTTPStatusCode = resp.StatusCode
 		finalURL := resp.Request.URL.String()
+		result.URL = finalURL
+		// resp.Request.RemoteAddr // use this to check for DNS poisoning censorship
 		if resp.StatusCode == 200 {
-			result.URL = finalURL
 			// check body message or length
 			// Sometimes the website loads as "200 OK" but contains "(b|B)locked" as response text
 			body, err := ioutil.ReadAll(resp.Body)
@@ -183,7 +196,8 @@ func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
 func SetProxyTransport() *http.Transport {
 	// create proxy transport
 	proxyURL := os.Getenv("PROXY_URL")
-	proxyTransport := &http.Transport{}
+	// Allow insecure, expired certificates
+	proxyTransport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	if runThroughProxy {
 		if proxyURL != "" {
 			proxy, err := url.Parse(proxyURL)
@@ -209,7 +223,7 @@ func GenerateRandomString(length int) string {
 	return string(b)
 }
 
-func initialiseDB(storeInDB string) (*gorm.DB, error) {
+func initialiseDB(storeInDB, scanID string) (*gorm.DB, error) {
 	switch storeInDB {
 	case "postgres":
 		postgresDSN := os.Getenv("POSTGRES_DSN")
@@ -223,7 +237,8 @@ func initialiseDB(storeInDB string) (*gorm.DB, error) {
 		}
 		return db, err
 	case "sqlite":
-		db, err := gorm.Open(sqlite.Open("is_your_isp_blocking_you.db"), &gorm.Config{})
+		dbFileName := fmt.Sprintf("is_your_isp_blocking_you-%s.db", scanID)
+		db, err := gorm.Open(sqlite.Open(dbFileName), &gorm.Config{})
 		if err != nil {
 			log.Error().Msgf("Can't open DB connection : %s", err.Error())
 			return db, err
@@ -257,5 +272,22 @@ func saveToDB(db *gorm.DB, results []Record, scanStats ScanStats) error {
 }
 
 func getHTMLTitle(body string) string {
-	return ""
+	tkn := html.NewTokenizer(strings.NewReader(body))
+	var isTitle bool
+	for {
+		tt := tkn.Next()
+		switch {
+		case tt == html.ErrorToken:
+			return ""
+		case tt == html.StartTagToken:
+			t := tkn.Token()
+			isTitle = t.Data == "title"
+		case tt == html.TextToken:
+			t := tkn.Token()
+			if isTitle {
+				log.Info().Msgf("Finding title : %s", t.Data)
+				return t.Data
+			}
+		}
+	}
 }

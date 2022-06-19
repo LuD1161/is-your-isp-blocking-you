@@ -43,8 +43,9 @@ type ScanStats struct {
 	UnknownHost          int     `gorm:"int;not null;" json:"unknown_host"`
 	ISP                  string  `gorm:"size:255;not null;" json:"isp"`
 	Country              string  `gorm:"size:255;not null;" json:"country"`
-	Location             string  `gorm:"size:255;not null;" json:"location"`
-	Latitude             float64 `gorm:"size:255;not null;" json:"latitude"`
-	Longitude            float64 `gorm:"size:255;not null;" json:"longitude"`
+	Location             string  `json:"location"`
+	Latitude             float64 `json:"latitude"`
+	Longitude            float64 `json:"longitude"`
+	DomainList           string  `gorm:"size:255;not null;" json:"domain_list"` // Filepath that was used to scan
 	EvilISP              bool    `gorm:"not null;" json:"evil_isp"`
 }
