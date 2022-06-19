@@ -25,6 +25,7 @@ var (
 	timeout         int
 	domainList      string
 	runThroughProxy bool
+	saveResponses   bool
 	storeInDB       string
 	scanId          = fmt.Sprintf("%d-%s", time.Now().Unix(), GenerateRandomString(10))
 	rootCmd         = &cobra.Command{
@@ -55,6 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
 	rootCmd.PersistentFlags().StringVarP(&domainList, "domain_list", "l", "citizenlabs", "Domain list to choose from. Valid options : 'citizenlabs', 'cisco', '<file_path>'. Either choose from 'citizenlabs', 'cisco' or specify the full path of your domain list. The first column of the domain list should contain the domain. Check data/sample_custom_domain_list.txt , for example.")
 	rootCmd.PersistentFlags().BoolVarP(&runThroughProxy, "run_through_proxy", "p", false, "Proxy URL to pass traffic through. Set the PROXY_URL env var, you can set in set-env-vars.sh file. The URL format : http(s)://<username>:<password>@proxy.website.com:<proxy_port> e.g. - http://localhost:8080 .The tool will try to fetch all the domains through this proxy. This is useful, when you want to test blocking on another ISP/country etc.")
+	rootCmd.PersistentFlags().BoolVarP(&saveResponses, "save_responses", "s", false, "Save responses in DB as base64 encoded string.")
 	rootCmd.PersistentFlags().StringVarP(&storeInDB, "store_in_db", "d", "sqlite", "If you want to save the results to db pass in the DB type. Valid choices : 'postgres', 'sqlite', 'mysql'. Also make sure to populate the `set-env-vars.sh` file with the respective env vars for the db.")
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})

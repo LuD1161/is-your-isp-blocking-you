@@ -93,19 +93,26 @@ var checkBlockingCmd = &cobra.Command{
 		for i := 0; i < len(urls); i++ {
 			result := <-resultsChan
 			record := Record{
-				Website:    result.URL,
-				ISP:        "",
-				Country:    "",
-				Location:   "",
-				Accessible: false,
-				ErrMsg:     "",
+				Model:          gorm.Model{},
+				ScanId:         scanId,
+				Website:        result.URL,
+				ISP:            ispResult.AsnOrg,
+				Country:        ispResult.Country,
+				Location:       ispResult.City,
+				Latitude:       ispResult.Latitude,
+				Longitude:      ispResult.Longitude,
+				Accessible:     false,
+				Data:           result.Data,
+				ErrMsg:         "",
+				HTTPStatusCode: result.HTTPStatusCode,
+				HTMLTitle:      result.HTMLTitle,
+				HTMLBodyLength: result.HTMLBodyLength,
 			}
 			if result.Error != nil {
 				if i%10000 == 0 {
 					log.Debug().Msgf("✅ URLs done : %d", i)
 					log.Error().Msgf("Error : %s", result.Error.Error())
 				}
-				record.ScanId = scanId
 				record.ErrMsg = result.Error.Error()
 				// truncate error message to avoid sql errors
 				if len(record.ErrMsg) > 1024 {
@@ -157,9 +164,15 @@ var checkBlockingCmd = &cobra.Command{
 			Latitude:             ispResult.Latitude,
 			EvilISP:              evilISP,
 		}
-		// this will save the results to DB if db_url is passed
-		if err := saveInDB(results, scanStats); err != nil {
-			log.Error().Stack().Err(err).Msgf("Error saving results in DB : %s", err.Error())
+		db, err := initialiseDB(storeInDB)
+		if err != nil {
+			log.Error().Stack().Err(err).Msgf("Error initialising DB : %s", err.Error())
+		} else if db != nil {
+			// if no err and db is initialized
+			// this will save the results to DB if db_url is passed
+			if err := saveToDB(db, results, scanStats); err != nil {
+				log.Error().Stack().Err(err).Msgf("Error saving results in DB : %s", err.Error())
+			}
 		}
 		if len(blocked) > 0 {
 			scanStats.EvilISP = true

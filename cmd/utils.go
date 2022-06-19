@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/zip"
+	b64 "encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -67,9 +69,15 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 	client.Timeout = time.Duration(timeout) * time.Second
 	client.Transport = customTransport
 	for url := range urlsChan {
-		var result Result
-		result.URL = url
-		result.Error = nil
+		result := Result{
+			Code:           -1,
+			URL:            url,
+			Data:           "",
+			HTTPStatusCode: -1,
+			HTMLTitle:      "",
+			HTMLBodyLength: -1,
+			Error:          nil,
+		}
 		resp, err := client.Get(url)
 		if err != nil {
 			result.Error = err
@@ -87,6 +95,7 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 			resultsChan <- result
 			continue
 		}
+		result.HTTPStatusCode = resp.StatusCode
 		finalURL := resp.Request.URL.String()
 		if resp.StatusCode == 200 {
 			result.URL = finalURL
@@ -99,6 +108,15 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 				resultsChan <- result
 				continue
 			}
+			// if saveResponses is set, only then save response body to DB
+			if saveResponses {
+				// base64 encode body
+				result.Data = b64.StdEncoding.EncodeToString(body)
+			}
+			// set body length
+			result.HTMLBodyLength = len(string(body))
+			// get title from body
+			result.HTMLTitle = getHTMLTitle(string(body))
 			resp.Body.Close()
 			if strings.Contains("blocked", string(body)) || len(body) < 600 {
 				result.Code = CONN_BLOCKED
@@ -176,7 +194,7 @@ func SetProxyTransport() *http.Transport {
 			log.Info().Msgf("Proxy set in http.transport : %s", proxyURL)
 		}
 	} else {
-		log.Info().Msgf("No PROXY_URL specified. Hence, no proxy set in http.transport created.")
+		log.Info().Msgf("No PROXY_URL specified. Hence, no proxy set in http.transport.")
 	}
 	return proxyTransport
 }
@@ -191,37 +209,53 @@ func GenerateRandomString(length int) string {
 	return string(b)
 }
 
-func saveInDB(results []Record, scanStats ScanStats) error {
+func initialiseDB(storeInDB string) (*gorm.DB, error) {
 	switch storeInDB {
 	case "postgres":
 		postgresDSN := os.Getenv("POSTGRES_DSN")
 		if postgresDSN == "" {
-			return errors.New("POSTGRES_DSN not specified")
+			return nil, errors.New("POSTGRES_DSN not specified")
 		}
 		db, err := gorm.Open(postgres.Open(postgresDSN), &gorm.Config{})
 		if err != nil {
 			log.Error().Msgf("Can't open DB connection : %s", err.Error())
-			panic(err.Error())
+			return nil, err
 		}
-		dbn, err := db.DB()
-		if err != nil {
-			panic(err.Error())
-		}
-		defer dbn.Close()
-		db.AutoMigrate(Record{}, ScanStats{})
-		if err := db.CreateInBatches(results, 1000).Error; err != nil {
-			log.Error().Stack().Err(err).Msgf("Error saving results in DB [CreateInBatches] : %s", err.Error())
-			return err
-		}
-		// Create scan stats
-		db.Create(&scanStats)
+		return db, err
 	case "sqlite":
+		db, err := gorm.Open(sqlite.Open("is_your_isp_blocking_you.db"), &gorm.Config{})
+		if err != nil {
+			log.Error().Msgf("Can't open DB connection : %s", err.Error())
+			return db, err
+		}
+		return db, err
 	case "mysql":
 	default:
 		if storeInDB != "" {
 			fmt.Println("sqlite & mysql are WIP. Please try with 'postgres'")
 		}
+		return nil, nil
 
 	}
-	return nil
+	return nil, nil
+}
+
+func saveToDB(db *gorm.DB, results []Record, scanStats ScanStats) error {
+	// Perform the
+	dbn, err := db.DB()
+	if err != nil {
+		panic(err.Error())
+	}
+	defer dbn.Close()
+	db.AutoMigrate(Record{}, ScanStats{})
+	if err := db.CreateInBatches(results, 1000).Error; err != nil {
+		log.Error().Stack().Err(err).Msgf("Error saving results in DB [CreateInBatches] : %s", err.Error())
+		return err
+	}
+	// Create scan stats
+	return db.Create(&scanStats).Error
+}
+
+func getHTMLTitle(body string) string {
+	return ""
 }

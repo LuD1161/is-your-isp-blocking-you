@@ -12,7 +12,7 @@ A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 - [ ] d3.js or some other tool to create a heat map
 - [x] Replace http client with retryable http client - https://github.com/hashicorp/go-retryablehttp
 - [x] Keep in DB stats for last run, like : 1. Scan Time 2. Domains scanned 3. Accessible, Non-accessible, blocked, connection timed out domains 4. Location 5. ISP 6. Evil or not 7. Time of scan 8. Type of filtering
-- [ ] Save all data as base64 encoded into file.
+- [x] Save all data as base64 encoded into file.
 - [ ] Add `goreleaser` to automatically publish new version
 - [ ] **Better Blocking Check** : Can check if page is blocked by checking similarity from a non-blocked source ( like a s3 bucket that saves the pages daily ) ?
 - [ ] Try out bypasses for common techniques. Keep this as an option in the cli tool.

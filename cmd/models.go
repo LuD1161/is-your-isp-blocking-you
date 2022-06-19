@@ -6,19 +6,29 @@ import (
 
 type Record struct {
 	gorm.Model
-	ScanId     string `gorm:"size:255;not null;" json:"scan_id"`
-	Website    string `gorm:"size:255;not null;" json:"website"`
-	ISP        string `gorm:"size:255;not null;" json:"isp"`
-	Country    string `gorm:"size:255;not null;" json:"country"`
-	Location   string `gorm:"size:255;not null;" json:"location"`
-	Accessible bool   `gorm:"not null;" json:"accessible"`
-	ErrMsg     string `gorm:"size:1024;" json:"err"`
+	ScanId         string  `gorm:"size:255;not null;" json:"scan_id"`
+	Website        string  `gorm:"size:255;not null;" json:"website"`
+	ISP            string  `gorm:"size:255;not null;" json:"isp"`
+	Country        string  `gorm:"size:255;not null;" json:"country"`
+	Location       string  `gorm:"size:255;" json:"location"`
+	Latitude       float64 `gorm:"size:255;" json:"latitude"`
+	Longitude      float64 `gorm:"size:255;" json:"longitude"`
+	Accessible     bool    `gorm:"not null;" json:"accessible"`
+	Data           string  `gorm:"type:text" json:"data"`
+	ErrMsg         string  `gorm:"size:1024;" json:"err"`
+	HTTPStatusCode int     `json:"http_status_code"`
+	HTMLTitle      string  `gorm:"type:text" json:"html_title"`
+	HTMLBodyLength int     `json:"html_body_length"`
 }
 
 type Result struct {
-	Code  int
-	URL   string
-	Error error
+	Code           int
+	URL            string
+	Data           string // base64 encoded response body; default disabled
+	HTTPStatusCode int
+	HTMLTitle      string
+	HTMLBodyLength int
+	Error          error
 }
 
 type ScanStats struct {
