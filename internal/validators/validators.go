@@ -1,8 +1,8 @@
 package validators
 
 import (
-	"github.com/LuD1161/is-your-isp-blocking-you/cmd"
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/interfaces"
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	airtelindia "github.com/LuD1161/is-your-isp-blocking-you/internal/validators/AirtelIndia"
 )
 
@@ -12,7 +12,7 @@ var (
 	}
 )
 
-func ValidatorResolver(ispResult cmd.IfConfigResponse) []interfaces.Validator {
+func ValidatorResolver(ispResult models.IfConfigResponse) []interfaces.Validator {
 	var validators []interfaces.Validator
 	for _, validator := range allValidators {
 		if (ispResult.Asn == validator.GetMetadata()["asn"]) || (ispResult.AsnOrg == validator.GetMetadata()["asn_org"]) || (ispResult.AsnOrg == validator.GetMetadata()["asn_org"]) {

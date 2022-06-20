@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/html"
@@ -62,7 +63,7 @@ func Unzip(filePath string) error {
 	return nil
 }
 
-func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransport *http.Transport) {
+func MakeRequest(urlsChan <-chan string, resultsChan chan<- models.Result, customTransport *http.Transport) {
 	retryClient := retryablehttp.NewClient()
 	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	retryClient.HTTPClient.Transport = customTransport
@@ -73,7 +74,7 @@ func MakeRequest(urlsChan <-chan string, resultsChan chan<- Result, customTransp
 	client := retryClient.StandardClient() // *http.Client
 	// client.Timeout = time.Duration(timeout) * time.Second
 	for url := range urlsChan {
-		result := Result{
+		result := models.Result{
 			Code:           -1,
 			URL:            url,
 			Data:           "",
@@ -173,7 +174,7 @@ func ReadCsvFile(filePath string) ([][]string, error) {
 	}
 }
 
-func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
+func GetISP(customTransport *http.Transport) (models.IfConfigResponse, error) {
 	client := &http.Client{Transport: customTransport}
 	req, err := http.NewRequest("GET", "https://ifconfig.co/json", nil)
 	if err != nil {
@@ -188,7 +189,7 @@ func GetISP(customTransport *http.Transport) (IfConfigResponse, error) {
 	if err != nil {
 		log.Error().Msgf("Error : %s ", err.Error())
 	}
-	var result IfConfigResponse
+	var result models.IfConfigResponse
 	err = json.Unmarshal(bodyText, &result)
 	return result, err
 }
@@ -255,14 +256,14 @@ func initialiseDB(storeInDB, scanID string) (*gorm.DB, error) {
 	return nil, nil
 }
 
-func saveToDB(db *gorm.DB, results []Record, scanStats ScanStats) error {
+func saveToDB(db *gorm.DB, results []models.Record, scanStats models.ScanStats) error {
 	// Perform the
 	dbn, err := db.DB()
 	if err != nil {
 		panic(err.Error())
 	}
 	defer dbn.Close()
-	db.AutoMigrate(Record{}, ScanStats{})
+	db.AutoMigrate(models.Record{}, models.ScanStats{})
 	if err := db.CreateInBatches(results, 1000).Error; err != nil {
 		log.Error().Stack().Err(err).Msgf("Error saving results in DB [CreateInBatches] : %s", err.Error())
 		return err

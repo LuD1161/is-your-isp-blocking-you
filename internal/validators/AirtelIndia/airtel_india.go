@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/LuD1161/is-your-isp-blocking-you/cmd"
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/interfaces"
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,7 +23,7 @@ type validator struct {
 	metadata map[string]string
 }
 
-func (v *validator) Validate(data cmd.ValidatorData) bool {
+func (v *validator) Validate(data models.ValidatorData) bool {
 	err := data.Err
 	resp := data.Response
 	finalURL := resp.Request.URL.String()

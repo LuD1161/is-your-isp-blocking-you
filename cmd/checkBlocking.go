@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/joeguo/tldextract"
 	"github.com/rs/zerolog/log"
@@ -75,7 +76,7 @@ var checkBlockingCmd = &cobra.Command{
 		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", filePath, len(urls), threads)
 		urlsChan := make(chan string, threads)
 		// responseChan := make(chan Result)
-		resultsChan := make(chan Result)
+		resultsChan := make(chan models.Result)
 		start := time.Now()
 		log.Info().Msgf("Started scan with ID : %s", scanId)
 		for i := 0; i < threads; i++ {
@@ -90,11 +91,11 @@ var checkBlockingCmd = &cobra.Command{
 			}
 		}()
 
-		results := make([]Record, 0)
+		results := make([]models.Record, 0)
 		accessible, inaccessible, blocked, unknownHost, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
 		for i := 0; i < len(urls); i++ {
 			result := <-resultsChan
-			record := Record{
+			record := models.Record{
 				Model:          gorm.Model{},
 				ScanId:         scanId,
 				Website:        result.URL,
@@ -150,7 +151,7 @@ var checkBlockingCmd = &cobra.Command{
 		if len(blocked) > 0 {
 			evilISP = true
 		}
-		scanStats := ScanStats{
+		scanStats := models.ScanStats{
 			Model:                gorm.Model{},
 			ScanId:               scanId,
 			ScanTime:             scanTime,
@@ -193,7 +194,7 @@ var checkBlockingCmd = &cobra.Command{
 	},
 }
 
-func printTable(scanTime int, result IfConfigResponse, scanStats ScanStats, filePath string) {
+func printTable(scanTime int, result models.IfConfigResponse, scanStats models.ScanStats, filePath string) {
 	// Print ISP details
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
