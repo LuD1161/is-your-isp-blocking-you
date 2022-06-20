@@ -73,11 +73,14 @@ var checkBlockingCmd = &cobra.Command{
 
 		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", filePath, len(urls), threads)
 		urlsChan := make(chan string, threads)
+		responseChan := make(chan ValidatorData)
 		resultsChan := make(chan Result)
 		start := time.Now()
 		log.Info().Msgf("Started scan with ID : %s", scanId)
+		validator := Validator{}
 		for i := 0; i < threads; i++ {
-			go MakeRequest(urlsChan, resultsChan, proxyTransport)
+			go MakeRequest(urlsChan, responseChan, proxyTransport)
+			go ValidateResponse(responseChan, resultsChan, validator)
 		}
 
 		go func() {
@@ -89,7 +92,8 @@ var checkBlockingCmd = &cobra.Command{
 		}()
 
 		results := make([]Record, 0)
-		accessible, inaccessible, blocked, unknownHost, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
+		accessible, inaccessible, unknownHost, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
+		HTTPFiltered, SNIFiltered, DNSFiltered := make([]string, 0), make([]string, 0), make([]string, 0)
 		for i := 0; i < len(urls); i++ {
 			result := <-resultsChan
 			record := Record{
@@ -107,6 +111,7 @@ var checkBlockingCmd = &cobra.Command{
 				HTTPStatusCode: result.HTTPStatusCode,
 				HTMLTitle:      result.HTMLTitle,
 				HTMLBodyLength: result.HTMLBodyLength,
+				ValidatorMsg:   result.Msg,
 			}
 			if result.Error != nil {
 				if i%10000 == 0 {
@@ -122,15 +127,17 @@ var checkBlockingCmd = &cobra.Command{
 			switch result.Code {
 			case CONN_RESET:
 				inaccessible = append(inaccessible, result.URL)
-			case CONN_BLOCKED:
-				blocked = append(blocked, result.URL)
-			case CONN_OK:
-				// fmt.Printf("✅ All good. %s", result.URL)
+			case DNS_FILTERING:
+				DNSFiltered = append(DNSFiltered, result.URL)
+			case HTTP_FILTERING:
+				HTTPFiltered = append(HTTPFiltered, result.URL)
+			case SNI_FILTERING:
+				SNIFiltered = append(SNIFiltered, result.URL)
+			case NOT_FILTERED:
 				record.Accessible = true
 				accessible = append(accessible, result.URL)
 			case CONN_UNKNOWN:
 				inaccessible = append(inaccessible, result.URL)
-				// fmt.Printf("✅ All good. %s", record)
 			case NO_SUCH_HOST:
 				unknownHost = append(unknownHost, result.URL)
 			case CONN_TIMEOUT:
@@ -144,8 +151,9 @@ var checkBlockingCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Msgf("Error unmarshalling data from ifconfig : %s", err.Error())
 		}
+		blocked := len(HTTPFiltered) + len(SNIFiltered) + len(DNSFiltered)
 		evilISP := false
-		if len(blocked) > 0 {
+		if blocked > 0 {
 			evilISP = true
 		}
 		scanStats := ScanStats{
@@ -154,8 +162,12 @@ var checkBlockingCmd = &cobra.Command{
 			ScanTime:             scanTime,
 			UniqueDomainsScanned: len(urls),
 			Accessible:           len(accessible),
+			ConnectionReset:      0,
 			Inaccessible:         len(inaccessible),
-			Blocked:              len(blocked),
+			Blocked:              blocked,
+			HTTPFiltered:         len(HTTPFiltered),
+			DNSFiltered:          len(DNSFiltered),
+			SNIFiltered:          len(SNIFiltered),
 			TimedOut:             len(timedOut),
 			UnknownHost:          len(unknownHost),
 			ISP:                  ispResult.AsnOrg,
@@ -176,17 +188,20 @@ var checkBlockingCmd = &cobra.Command{
 				log.Error().Stack().Err(err).Msgf("Error saving results in DB : %s", err.Error())
 			}
 		}
-		if len(blocked) > 0 {
+		if blocked > 0 {
 			scanStats.EvilISP = true
 		}
 		// ToDo : Change this to dependent on a CLI flag
 		if os.Getenv("LogLevel") == "Debug" {
-			fmt.Printf("blocked URLs : %s\n", blocked)
+			fmt.Printf("Blocked URLs -\nDNS_Filtered : %s\nHTTP_Filtered : %s\nSNI_Filtered : %s\n", DNSFiltered, HTTPFiltered, SNIFiltered)
 			fmt.Printf("Inaccessible URLs : %s\n", inaccessible)
 		}
 		close(urlsChan)
 		close(resultsChan)
 		// Print tabular output
+		if storeInDB == "sqlite" {
+			fmt.Printf("Database file : is_your_isp_blocking_you-%s.db\n", scanId)
+		}
 		printTable(scanTime, ispResult, scanStats, filePath)
 	},
 }
@@ -209,13 +224,25 @@ func printTable(scanTime int, result IfConfigResponse, scanStats ScanStats, file
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.StyleLight)
 	t.SetTitle(fmt.Sprintf("Current Scan Data | Domain List : %s", filePath))
-	t.AppendHeader(table.Row{"Unique Domains", "Accessible", "Inaccessible", "Blocked", "Timed Out", "Unknown Host", "Good ISP"})
+	t.AppendHeader(table.Row{"Unique Domains", "Accessible", "Inaccessible", "Total Blocked", "Timed Out", "Unknown Host", "Good ISP"})
 	evilISP := "✅"
 	if scanStats.EvilISP {
 		evilISP = "❌"
 	}
 	t.AppendRows([]table.Row{
 		{scanStats.UniqueDomainsScanned, scanStats.Accessible, scanStats.Inaccessible, scanStats.Blocked, scanStats.TimedOut, scanStats.UnknownHost, evilISP},
+	})
+	t.AppendSeparator()
+	t.Render()
+
+	// Print Censorship Categories
+	t = table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(table.StyleLight)
+	t.SetTitle("Current Censorship Data")
+	t.AppendHeader(table.Row{"DNS Filtering", "HTTP Filtering", "SNI Filtering"})
+	t.AppendRows([]table.Row{
+		{scanStats.DNSFiltered, scanStats.HTTPFiltered, scanStats.SNIFiltered},
 	})
 	t.AppendSeparator()
 	t.Render()

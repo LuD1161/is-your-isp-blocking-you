@@ -16,3 +16,4 @@
 set-env-vars.sh
 is-your-isp-blocking-you
 .vscode
+*.db

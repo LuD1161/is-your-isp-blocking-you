@@ -13,18 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type IfConfigResponse struct {
-	IP         string  `json:"ip"`
-	Country    string  `json:"country"`
-	CountryISO string  `json:"country_iso"`
-	RegionName string  `json:"region_name"`
-	ZipCode    string  `json:"zip_code"`
-	City       string  `json:"city"`
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	AsnOrg     string  `json:"asn_org"`
-}
-
 // getISPCmd represents the getISP command
 var getISPCmd = &cobra.Command{
 	Use:   "getISP",

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net/http"
+
 	"gorm.io/gorm"
 )
 
@@ -19,11 +21,13 @@ type Record struct {
 	HTTPStatusCode int     `json:"http_status_code"`
 	HTMLTitle      string  `gorm:"type:text" json:"html_title"`
 	HTMLBodyLength int     `json:"html_body_length"`
+	ValidatorMsg   string  `gorm:"type:text" json:"validator_message"`
 }
 
 type Result struct {
 	Code           int
 	URL            string
+	Msg            string // Any extra message. Like : what blocked string in HTTP Filtering
 	Data           string // base64 encoded response body; default disabled
 	HTTPStatusCode int
 	HTMLTitle      string
@@ -37,8 +41,12 @@ type ScanStats struct {
 	ScanTime             int     `gorm:"column:scan_time;int;not null;" json:"scan_time"`
 	UniqueDomainsScanned int     `gorm:"int;not null;" json:"unique_domains_scanned"`
 	Accessible           int     `gorm:"int;not null;" json:"accessible"`
+	ConnectionReset      int     `gorm:"int;not null;" json:"connection_reset"`
 	Inaccessible         int     `gorm:"int;not null;" json:"inaccessible"`
 	Blocked              int     `gorm:"int;not null;" json:"blocked"`
+	HTTPFiltered         int     `gorm:"int;not null;" json:"http_filtered"`
+	DNSFiltered          int     `gorm:"int;not null;" json:"dns_filtered"`
+	SNIFiltered          int     `gorm:"int;not null;" json:"sni_filtered"`
 	TimedOut             int     `gorm:"int;not null;" json:"timed_out"`
 	UnknownHost          int     `gorm:"int;not null;" json:"unknown_host"`
 	ISP                  string  `gorm:"size:255;not null;" json:"isp"`
@@ -48,4 +56,34 @@ type ScanStats struct {
 	Longitude            float64 `json:"longitude"`
 	DomainList           string  `gorm:"size:255;not null;" json:"domain_list"` // Filepath that was used to scan
 	EvilISP              bool    `gorm:"not null;" json:"evil_isp"`
+}
+
+type IfConfigResponse struct {
+	IP         string  `json:"ip"`
+	Country    string  `json:"country"`
+	CountryISO string  `json:"country_iso"`
+	RegionName string  `json:"region_name"`
+	ZipCode    string  `json:"zip_code"`
+	City       string  `json:"city"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	Asn        string  `json:"asn"`
+	AsnOrg     string  `json:"asn_org"`
+}
+
+type ValidatorData struct {
+	URL      string
+	Response http.Response
+	Err      error
+}
+
+type FilteringYAML struct {
+	DNSFILTERING struct {
+		CNAME []string `yaml:"CNAME"`
+		IP    []string `yaml:"IP"`
+	} `yaml:"DNS_FILTERING"`
+	HTTPFILTERING struct {
+		Body []string `yaml:"Body"`
+		URL  []string `yaml:"URL"`
+	} `yaml:"HTTP_FILTERING"`
 }

@@ -1,0 +1,11 @@
+--- 
+DNS_FILTERING: 
+  CNAME:
+    - dotblocking.dummy # Country:IN, ISP: Airtel, ASN: AS24560, Comment: ""
+  IP:
+    - "13.127.247.216" # Country:IN, ISP: Airtel, ASN: AS24560, Comment: ""
+HTTP_FILTERING: 
+  Body: # string in body
+    - www.airtel.in/dot/ # Country:IN, ISP: Airtel, ASN: AS24560, Comment: "This is the domain that hosts the Department of Telecom's (DoT) notice"
+  URL: # Final URL
+    - www.airtel.in/dot/
