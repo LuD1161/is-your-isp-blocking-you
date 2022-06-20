@@ -32,6 +32,7 @@ var checkBlockingCmd = &cobra.Command{
 		// Get ISP first, to get the country
 		proxyTransport := SetProxyTransport()
 		ispResult, err := GetISP(proxyTransport)
+		// validators := validators.ValidatorResolver(ispResult)
 		if err != nil {
 			log.Fatal().Msgf("Error getting ISP data. Probably internet not connected or ifconfig.co is blocked ( unlikely, check this in your browser or terminal ).")
 		}
@@ -73,6 +74,7 @@ var checkBlockingCmd = &cobra.Command{
 
 		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", filePath, len(urls), threads)
 		urlsChan := make(chan string, threads)
+		// responseChan := make(chan Result)
 		resultsChan := make(chan Result)
 		start := time.Now()
 		log.Info().Msgf("Started scan with ID : %s", scanId)

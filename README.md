@@ -29,6 +29,7 @@ A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 - [ ] When choosing `cisco` list warn people about the bandwidth usage and how much data + time it might consume.
 - [ ] Update `README` with the way it is being checked. Mentioning each of the block strategies and how different ISPs are using it. How the tool is checking these ?
 - [ ] Check DNS filtering using `net.LookupIP` or server IP from the request's response .
+- [ ] Create `Airtel` blocking module. Redirects to `http://www.airtel.in/dot/`.
 
 ## ToDo Server :
 - [ ] Create a serverless lambda to send data to.

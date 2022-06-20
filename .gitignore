@@ -16,3 +16,5 @@
 set-env-vars.sh
 is-your-isp-blocking-you
 .vscode
+# sqlite DB file
+*.db

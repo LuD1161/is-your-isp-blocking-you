@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net/http"
+
 	"gorm.io/gorm"
 )
 
@@ -48,4 +50,22 @@ type ScanStats struct {
 	Longitude            float64 `json:"longitude"`
 	DomainList           string  `gorm:"size:255;not null;" json:"domain_list"` // Filepath that was used to scan
 	EvilISP              bool    `gorm:"not null;" json:"evil_isp"`
+}
+
+type IfConfigResponse struct {
+	IP         string  `json:"ip"`
+	Country    string  `json:"country"`
+	CountryISO string  `json:"country_iso"`
+	RegionName string  `json:"region_name"`
+	ZipCode    string  `json:"zip_code"`
+	City       string  `json:"city"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	Asn        string  `json:"asn"`
+	AsnOrg     string  `json:"asn_org"`
+}
+
+type ValidatorData struct {
+	Response http.Response
+	Err      error
 }
