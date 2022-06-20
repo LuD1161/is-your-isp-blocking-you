@@ -39,6 +39,7 @@ type ScanStats struct {
 	ScanTime             int     `gorm:"column:scan_time;int;not null;" json:"scan_time"`
 	UniqueDomainsScanned int     `gorm:"int;not null;" json:"unique_domains_scanned"`
 	Accessible           int     `gorm:"int;not null;" json:"accessible"`
+	ConnectionReset      int     `gorm:"int;not null;" json:"connection_reset"`
 	Inaccessible         int     `gorm:"int;not null;" json:"inaccessible"`
 	Blocked              int     `gorm:"int;not null;" json:"blocked"`
 	TimedOut             int     `gorm:"int;not null;" json:"timed_out"`

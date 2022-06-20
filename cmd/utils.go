@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/tls"
-	b64 "encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/constants"
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/interfaces"
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
@@ -63,90 +64,74 @@ func Unzip(filePath string) error {
 	return nil
 }
 
-func MakeRequest(urlsChan <-chan string, resultsChan chan<- models.Result, customTransport *http.Transport) {
+func MakeRequest(urlsChan <-chan string, responseChan chan<- models.ValidatorData, customTransport *http.Transport) {
 	retryClient := retryablehttp.NewClient()
 	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	retryClient.HTTPClient.Transport = customTransport
 	retryClient.HTTPClient.Timeout = time.Duration(timeout) * time.Second
-	retryClient.RetryMax = MAX_RETRIES
+	retryClient.RetryMax = constants.MAX_RETRIES
 	retryClient.Logger = nil // Don't want to log anything here
 
 	client := retryClient.StandardClient() // *http.Client
-	// client.Timeout = time.Duration(timeout) * time.Second
+
 	for url := range urlsChan {
-		result := models.Result{
-			Code:           -1,
-			URL:            url,
-			Data:           "",
-			HTTPStatusCode: -1,
-			HTMLTitle:      "",
-			HTMLBodyLength: -1,
-			Error:          nil,
+		result := models.ValidatorData{
+			Response: http.Response{},
+			Err:      nil,
 		}
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			result.Error = err
-			result.Code = CONN_UNKNOWN
+			result.Err = err
 			log.Debug().Msgf("URL : %s | Error : %+v", url, err)
+			responseChan <- result
 			continue
 		}
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0")
-		resp, err := client.Do(req)
-		if err != nil {
-			result.Error = err
-			result.Code = CONN_UNKNOWN
-			if strings.Contains(err.Error(), "connection reset by peer") {
-				log.Debug().Msgf("URL : %s | Error : %+v", url, err)
-				result.Code = CONN_RESET
-			}
-			if strings.Contains(err.Error(), "no such host") {
-				result.Code = NO_SUCH_HOST
-			}
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				result.Code = CONN_TIMEOUT
-			}
-			resultsChan <- result
-			continue
-		}
-		result.HTTPStatusCode = resp.StatusCode
-		finalURL := resp.Request.URL.String()
-		result.URL = finalURL
-		// resp.Request.RemoteAddr // use this to check for DNS poisoning censorship
-		if resp.StatusCode == 200 {
-			// check body message or length
-			// Sometimes the website loads as "200 OK" but contains "(b|B)locked" as response text
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				result.Code = CONN_UNKNOWN
-				result.Error = err
-				resultsChan <- result
-				continue
-			}
-			// if saveResponses is set, only then save response body to DB
-			if saveResponses {
-				// base64 encode body
-				result.Data = b64.StdEncoding.EncodeToString(body)
-			}
-			// set body length
-			result.HTMLBodyLength = len(string(body))
-			// get title from body
-			result.HTMLTitle = getHTMLTitle(string(body))
-			resp.Body.Close()
-			if strings.Contains("blocked", string(body)) || len(body) < 600 {
-				result.Code = CONN_BLOCKED
-				resultsChan <- result
-				continue
-			}
-			log.Debug().Msgf("URL : %s | finalURL : %s | len(body) : %d\n", url, finalURL, len(body))
-			result.Code = CONN_OK
-			resultsChan <- result
-			continue
+		response, err := client.Do(req)
+		result.Err = err
+		if err == nil {
+			result.Response = *response
+			log.Debug().Msgf("result.Response : %s", result.Response.Request.URL.String())
+			log.Debug().Msgf("result.Response.StatusCode : %d", result.Response.StatusCode)
 		} else {
-			log.Debug().Msgf("URL : %s | resp.StatusCode : %d", url, resp.StatusCode)
-			result.Code = CONN_UNKNOWN
-			resultsChan <- result
-			continue
+			log.Debug().Msgf("result.Err : %s", result.Err.Error())
 		}
+		responseChan <- result
+	}
+}
+
+func ValidateResponse(responseChan <-chan models.ValidatorData, resultsChan chan<- models.Result, validator interfaces.Validator) {
+	for response := range responseChan {
+		result := models.Result{
+			Code:           0,
+			URL:            "",
+			Data:           "",
+			HTTPStatusCode: 0,
+			HTMLTitle:      "",
+			HTMLBodyLength: 0,
+			Error:          response.Err,
+		}
+		var body []byte
+		var err error
+		if response.Err == nil {
+			result.URL = response.Response.Request.URL.String()
+			body, err = ioutil.ReadAll(response.Response.Body)
+			if err == nil {
+				result.HTMLTitle = GetHTMLTitle(string(body))
+			}
+			result.HTTPStatusCode = response.Response.StatusCode
+			result.HTMLBodyLength = len(body)
+		}
+		// Restore the io.ReadCloser to it's original state
+		response.Response.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		code, err := validator.Validate(response)
+		if err != nil {
+			log.Error().Msgf("[%s] Error in validating response : %s", validator.GetMetadata()["name"], err.Error())
+		}
+		result.Code = code
+		result.Error = err
+
+		resultsChan <- result
 	}
 }
 
@@ -272,7 +257,7 @@ func saveToDB(db *gorm.DB, results []models.Record, scanStats models.ScanStats) 
 	return db.Create(&scanStats).Error
 }
 
-func getHTMLTitle(body string) string {
+func GetHTMLTitle(body string) string {
 	tkn := html.NewTokenizer(strings.NewReader(body))
 	var isTitle bool
 	for {

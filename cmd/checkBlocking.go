@@ -10,7 +10,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/constants"
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
+	"github.com/LuD1161/is-your-isp-blocking-you/internal/validators"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/joeguo/tldextract"
 	"github.com/rs/zerolog/log"
@@ -33,7 +35,7 @@ var checkBlockingCmd = &cobra.Command{
 		// Get ISP first, to get the country
 		proxyTransport := SetProxyTransport()
 		ispResult, err := GetISP(proxyTransport)
-		// validators := validators.ValidatorResolver(ispResult)
+		validator := validators.ValidatorResolver(ispResult)
 		if err != nil {
 			log.Fatal().Msgf("Error getting ISP data. Probably internet not connected or ifconfig.co is blocked ( unlikely, check this in your browser or terminal ).")
 		}
@@ -75,12 +77,13 @@ var checkBlockingCmd = &cobra.Command{
 
 		log.Info().Msgf("\n✅ Domain List : %s\n✅ Unique URLs : %d\n✅ Threads %d\n", filePath, len(urls), threads)
 		urlsChan := make(chan string, threads)
-		// responseChan := make(chan Result)
+		responseChan := make(chan models.ValidatorData)
 		resultsChan := make(chan models.Result)
 		start := time.Now()
 		log.Info().Msgf("Started scan with ID : %s", scanId)
 		for i := 0; i < threads; i++ {
-			go MakeRequest(urlsChan, resultsChan, proxyTransport)
+			go MakeRequest(urlsChan, responseChan, proxyTransport)
+			go ValidateResponse(responseChan, resultsChan, validator)
 		}
 
 		go func() {
@@ -92,7 +95,7 @@ var checkBlockingCmd = &cobra.Command{
 		}()
 
 		results := make([]models.Record, 0)
-		accessible, inaccessible, blocked, unknownHost, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
+		accessible, inaccessible, blocked, unknownHost, conn_reset, timedOut := make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0), make([]string, 0)
 		for i := 0; i < len(urls); i++ {
 			result := <-resultsChan
 			record := models.Record{
@@ -123,20 +126,18 @@ var checkBlockingCmd = &cobra.Command{
 				}
 			}
 			switch result.Code {
-			case CONN_RESET:
-				inaccessible = append(inaccessible, result.URL)
-			case CONN_BLOCKED:
+			case constants.CONN_RESET:
+				conn_reset = append(conn_reset, result.URL)
+			case constants.CONN_BLOCKED:
 				blocked = append(blocked, result.URL)
-			case CONN_OK:
-				// fmt.Printf("✅ All good. %s", result.URL)
+			case constants.CONN_OK:
 				record.Accessible = true
 				accessible = append(accessible, result.URL)
-			case CONN_UNKNOWN:
+			case constants.CONN_UNKNOWN:
 				inaccessible = append(inaccessible, result.URL)
-				// fmt.Printf("✅ All good. %s", record)
-			case NO_SUCH_HOST:
+			case constants.NO_SUCH_HOST:
 				unknownHost = append(unknownHost, result.URL)
-			case CONN_TIMEOUT:
+			case constants.CONN_TIMEOUT:
 				timedOut = append(timedOut, result.URL)
 			default:
 				log.Error().Msgf("default case : %+v", result)
@@ -157,6 +158,7 @@ var checkBlockingCmd = &cobra.Command{
 			ScanTime:             scanTime,
 			UniqueDomainsScanned: len(urls),
 			Accessible:           len(accessible),
+			ConnectionReset:      len(conn_reset),
 			Inaccessible:         len(inaccessible),
 			Blocked:              len(blocked),
 			TimedOut:             len(timedOut),
@@ -212,13 +214,13 @@ func printTable(scanTime int, result models.IfConfigResponse, scanStats models.S
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.StyleLight)
 	t.SetTitle(fmt.Sprintf("Current Scan Data | Domain List : %s", filePath))
-	t.AppendHeader(table.Row{"Unique Domains", "Accessible", "Inaccessible", "Blocked", "Timed Out", "Unknown Host", "Good ISP"})
+	t.AppendHeader(table.Row{"Unique Domains", "Accessible", "Connection Reset", "Inaccessible", "Blocked", "Timed Out", "Unknown Host", "Good ISP"})
 	evilISP := "✅"
 	if scanStats.EvilISP {
 		evilISP = "❌"
 	}
 	t.AppendRows([]table.Row{
-		{scanStats.UniqueDomainsScanned, scanStats.Accessible, scanStats.Inaccessible, scanStats.Blocked, scanStats.TimedOut, scanStats.UnknownHost, evilISP},
+		{scanStats.UniqueDomainsScanned, scanStats.Accessible, scanStats.ConnectionReset, scanStats.Inaccessible, scanStats.Blocked, scanStats.TimedOut, scanStats.UnknownHost, evilISP},
 	})
 	t.AppendSeparator()
 	t.Render()

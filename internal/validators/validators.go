@@ -4,6 +4,7 @@ import (
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/interfaces"
 	"github.com/LuD1161/is-your-isp-blocking-you/internal/models"
 	airtelindia "github.com/LuD1161/is-your-isp-blocking-you/internal/validators/AirtelIndia"
+	generic "github.com/LuD1161/is-your-isp-blocking-you/internal/validators/Generic"
 )
 
 var (
@@ -12,12 +13,13 @@ var (
 	}
 )
 
-func ValidatorResolver(ispResult models.IfConfigResponse) []interfaces.Validator {
-	var validators []interfaces.Validator
+func ValidatorResolver(ispResult models.IfConfigResponse) interfaces.Validator {
 	for _, validator := range allValidators {
+		// TODO : Add check on the basis of tags, name substring match etc
 		if (ispResult.Asn == validator.GetMetadata()["asn"]) || (ispResult.AsnOrg == validator.GetMetadata()["asn_org"]) || (ispResult.AsnOrg == validator.GetMetadata()["asn_org"]) {
-			validators = append(validators, validator)
+			return validator
 		}
 	}
-	return validators
+	// If no validator is found, return the generic validator
+	return generic.NewValidator()
 }

@@ -1,4 +1,4 @@
-package airtelindia
+package generic
 
 import (
 	"io/ioutil"
@@ -11,13 +11,13 @@ import (
 )
 
 var metadata = map[string]string{
-	"name":       "Airtel India Validator",
-	"tags":       "airtel, optical fiber, broadband",
-	"asn":        "AS24560",
-	"asn_org":    "Bharti Airtel Ltd., Telemedia Services",
-	"references": "https://github.com/captn3m0/airtel-blocked-hosts/blob/airtel-fiber/airtel-fiber-blocked-hosts.txt",
-	"method":     "connection reset, http filtering, DNS poisoning",
-	"country":    "India",
+	"name":       "Generic Validator",
+	"tags":       "generic",
+	"asn":        "",
+	"asn_org":    "",
+	"references": "",
+	"method":     "connection reset, website redirection, DNS poisoning",
+	"country":    "",
 }
 
 type validator struct {
@@ -27,15 +27,10 @@ type validator struct {
 func (v *validator) Validate(data models.ValidatorData) (int, error) {
 	err := data.Err
 	resp := data.Response
-	finalURL := ""
+	finalURL := resp.Request.URL.String()
 
-	if err == nil {
-		finalURL = resp.Request.URL.String()
-	}
-
-	log.Debug().Msgf("URL : %s | Error : %+v", finalURL, data.Err)
 	// Method 1 : Check PR_CONNECTION_RESET first
-	if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+	if strings.Contains(err.Error(), "connection reset by peer") {
 		log.Debug().Msgf("URL : %s | Error : %+v", finalURL, data.Err)
 		return constants.CONN_RESET, nil
 	}
@@ -50,11 +45,10 @@ func (v *validator) Validate(data models.ValidatorData) (int, error) {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Error().Msgf("Error in reading response body : %s", err.Error())
-			return constants.OTHER_ERROR, err
+			return constants.CONN_OK, err
 		}
-		// Wherever it redirects, this is the domain that hosts the Department of Telecom's (DoT) notice
-		if strings.Contains(string(body), "www.airtel.in/dot/") {
-			log.Debug().Msgf("URL : %s | Body : %s", finalURL, body)
+		if strings.Contains(string(body), "The website has been blocked as per order of Ministry of Electronics") {
+			log.Debug().Msgf("URL : %s | Error : %+v", finalURL, data.Err)
 			return constants.CONN_BLOCKED, nil
 		}
 	}
