@@ -97,7 +97,7 @@ func MakeRequest(urlsChan <-chan string, responseChan chan<- ValidatorData, cust
 func ValidateResponse(responseChan <-chan ValidatorData, resultsChan chan<- Result, validator Validator) {
 	for response := range responseChan {
 		result := Result{
-			Code:           0,
+			Code:           "",
 			URL:            response.URL,
 			Data:           "",
 			HTTPStatusCode: 0,
@@ -110,20 +110,20 @@ func ValidateResponse(responseChan <-chan ValidatorData, resultsChan chan<- Resu
 		if err != nil {
 			if strings.Contains(err.Error(), "no such host") {
 				result.Code = NO_SUCH_HOST
-			}
-			// giving up after 4 attempt(s): Get "http://blog.com": dial tcp 195.170.168.2:80: connect: network is unreachable
-			// context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-			if strings.Contains(err.Error(), "connect: network is unreachable") || strings.Contains(err.Error(), "Client.Timeout exceeded") {
+			} else if strings.Contains(err.Error(), "connect: network is unreachable") || strings.Contains(err.Error(), "Client.Timeout exceeded") {
+				// giving up after 4 attempt(s): Get "http://blog.com": dial tcp 195.170.168.2:80: connect: network is unreachable
+				// context deadline exceeded (Client.Timeout exceeded while awaiting headers)
 				result.Code = CONN_TIMEOUT
+			} else {
+				// Running this through validator to evaluate PR_CONNECTION_RESET , whether it's actual SNI block or not
+				code, msg, err := validator.Validate(response)
+				if err != nil {
+					log.Error().Msgf("Error in validating response : %s", err.Error())
+				}
+				result.Code = code
+				result.Error = err
+				result.Msg = msg
 			}
-			// Running this through validator to evaluate PR_CONNECTION_RESET , whether it's actual SNI block or not
-			code, msg, err := validator.Validate(response)
-			if err != nil {
-				log.Error().Msgf("Error in validating response : %s", err.Error())
-			}
-			result.Code = code
-			result.Error = err
-			result.Msg = msg
 		} else {
 			result.URL = response.Response.Request.URL.String()
 			body, err = ioutil.ReadAll(response.Response.Body)
@@ -136,7 +136,7 @@ func ValidateResponse(responseChan <-chan ValidatorData, resultsChan chan<- Resu
 					result.Data = b64.StdEncoding.EncodeToString(body)
 				}
 			} else { // err != nil
-				log.Error().Msgf("Error in reading body : %s", err.Error())
+				log.Error().Msgf("URL : %s | Error in reading body : %s", result.URL, err.Error())
 			}
 			result.HTTPStatusCode = response.Response.StatusCode
 

@@ -1,11 +1,39 @@
---- 
-DNS_FILTERING: 
+---
+DNS_FILTERING:
   CNAME:
-    - dotblocking.dummy # Country:IN, ISP: Airtel, ASN: AS24560, Comment: ""
+    - Value: www.airtel.in/dot/
+      country: IN
+      ISP: ''
+      ASN: ''
+      Reference: ''
+      Comment: ''
   IP:
-    - "13.127.247.216" # Country:IN, ISP: Airtel, ASN: AS24560, Comment: ""
-HTTP_FILTERING: 
-  Body: # string in body
-    - www.airtel.in/dot/ # Country:IN, ISP: Airtel, ASN: AS24560, Comment: "This is the domain that hosts the Department of Telecom's (DoT) notice"
-  URL: # Final URL
-    - www.airtel.in/dot/
+    - Value: "13.127.247.216"
+      country: IN
+      ISP: ''
+      ASN: ''
+      Reference: ''
+      Comment: ''
+HTTP_FILTERING:
+  Body:
+    - Value: www.airtel.in/dot/
+      country: IN
+      ISP: Bharti Airtel
+      ASN: AS24560
+      Reference: Blocked on http://123movies.co
+      Comment: "Airtel does HTTP FIltering and adds a meta tag with iframe as www.airtel.in/dot/ , which serves the Department of Telecom's (DoT) notice."
+  URL:
+    - Value: www.airtel.in/dot/
+      country: IN
+      ISP: Bharti Airtel
+      ASN: AS24560
+      Reference: Blocked on http://123movies.co
+      Comment: ''
+SNI_FILTERING:
+  Error:
+    - Value: 'connection reset by peer'
+      country: IN
+      ISP: Bharti Airtel
+      ASN: AS24560
+      Reference: Blocked on https://123movies.co
+      Comment: ''

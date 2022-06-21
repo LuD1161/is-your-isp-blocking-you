@@ -18,9 +18,10 @@ A tool to check if the ISP is blocking you for any of the Alexa top 1M websites
 TODO
 
 ## Datasets
-1. `data/India/potentially_blocked_unique_hostnames.txt` - https://github.com/kush789/How-India-Censors-The-Web-Data/blob/master/potentially_blocked_unique_hostnames.txt
-2. `data/India/airtel-fiber-blocked-hosts.txt` - https://github.com/captn3m0/airtel-blocked-hosts
-3. `data/India/act_blocked_list_26_may.txt` - https://github.com/qurbat/blocked-hosts/blob/main/output/may_26_2022-blocked_hosts.txt
+1. `data/citizenlabs-lists` - https://github.com/citizenlab/test-lists
+2. `data/India/potentially_blocked_unique_hostnames.txt` - https://github.com/kush789/How-India-Censors-The-Web-Data/blob/master/potentially_blocked_unique_hostnames.txt
+3. `data/India/airtel-fiber-blocked-hosts.txt` - https://github.com/captn3m0/airtel-blocked-hosts
+4. `data/India/act_blocked_list_26_may.txt` - https://github.com/qurbat/blocked-hosts/blob/main/output/may_26_2022-blocked_hosts.txt
 
 ## ToDo :
 - [x] Option to use restricted domains from lists like : [CitizenLabs/test-lists](https://github.com/citizenlab/test-lists), [Domains Project](https://github.com/tb0hdan/domains) etc
@@ -32,6 +33,7 @@ TODO
 - [ ] Create an un-censored source of truth.
 - [ ] Check with some un-censored source of truth.
 - [ ] Add `goreleaser` to automatically publish new version
+- [ ] Can check for `www` subdomain, where the answer to a `GET` request is `no such host`.
 - [ ] **Better Blocking Check** : Can check if page is blocked by checking similarity from a non-blocked source ( like a s3 bucket that saves the pages daily ) ?
 - [ ] Try out bypasses for common techniques. Keep this as an option in the cli tool.
 - [ ] Run multiple times, to avoid flaky results

@@ -21,11 +21,12 @@ type Record struct {
 	HTTPStatusCode int     `json:"http_status_code"`
 	HTMLTitle      string  `gorm:"type:text" json:"html_title"`
 	HTMLBodyLength int     `json:"html_body_length"`
+	FilteringType  string  `gorm:"size:50;" json:"filtering_type"`
 	ValidatorMsg   string  `gorm:"type:text" json:"validator_message"`
 }
 
 type Result struct {
-	Code           int
+	Code           string
 	URL            string
 	Msg            string // Any extra message. Like : what blocked string in HTTP Filtering
 	Data           string // base64 encoded response body; default disabled
@@ -77,13 +78,24 @@ type ValidatorData struct {
 	Err      error
 }
 
+type FilterObj struct {
+	Value     string `yaml:"Value"`
+	Country   string `yaml:"country"`
+	ISP       string `yaml:"ISP"`
+	ASN       string `yaml:"ASN"`
+	Reference string `yaml:"Reference"`
+	Comment   string `yaml:"Comment"`
+}
 type FilteringYAML struct {
 	DNSFILTERING struct {
-		CNAME []string `yaml:"CNAME"`
-		IP    []string `yaml:"IP"`
+		CNAME []FilterObj `yaml:"CNAME"`
+		IP    []FilterObj `yaml:"IP"`
 	} `yaml:"DNS_FILTERING"`
 	HTTPFILTERING struct {
-		Body []string `yaml:"Body"`
-		URL  []string `yaml:"URL"`
+		Body []FilterObj `yaml:"Body"`
+		URL  []FilterObj `yaml:"URL"`
 	} `yaml:"HTTP_FILTERING"`
+	SNIFILTERING struct {
+		Error []FilterObj `yaml:"Error"`
+	} `yaml:"SNI_FILTERING"`
 }

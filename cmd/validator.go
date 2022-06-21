@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -16,18 +16,18 @@ var (
 	fYaml FilteringYAML
 )
 
-func (v *Validator) Validate(data ValidatorData) (int, string, error) {
+func (v *Validator) Validate(data ValidatorData) (string, string, error) {
 	resp := data.Response
 	finalURL := ""
 
 	// Read filtering.yaml to load all filters
 	yfile, err := ioutil.ReadFile("filtering.yaml")
 	if err != nil {
-		return OTHER_ERROR, "", errors.New("couldn't parse filtering.yaml file in the root directory")
+		return OTHER_ERROR, "", fmt.Errorf("error parsing filtering.yaml : %s", err.Error())
 	}
 
 	if err := yaml.Unmarshal(yfile, &fYaml); err != nil {
-		return OTHER_ERROR, "", errors.New("couldn't parse filtering.yaml file in the root directory")
+		return OTHER_ERROR, "", fmt.Errorf("error parsing filtering.yaml : %s", err.Error())
 	}
 
 	if data.Err == nil {
@@ -52,10 +52,10 @@ func (v *Validator) Validate(data ValidatorData) (int, string, error) {
 		return v.CheckHTTPFiltering(resp.Body)
 	}
 
-	return NOT_FILTERED, "OK", nil
+	return NO_FILTERING, "OK", nil
 }
 
-func (v *Validator) CheckHTTPFiltering(bodyReader io.ReadCloser) (int, string, error) {
+func (v *Validator) CheckHTTPFiltering(bodyReader io.ReadCloser) (string, string, error) {
 
 	body, err := ioutil.ReadAll(bodyReader)
 	if err != nil {
@@ -65,9 +65,9 @@ func (v *Validator) CheckHTTPFiltering(bodyReader io.ReadCloser) (int, string, e
 	// Wherever it redirects, this is the domain that hosts the Department of Telecom's (DoT) notice
 	// Check body for strings
 	for _, blockedString := range fYaml.HTTPFILTERING.Body {
-		if strings.Contains(string(body), blockedString) {
-			return HTTP_FILTERING, blockedString, nil
+		if strings.Contains(string(body), blockedString.Value) {
+			return HTTP_FILTERING, blockedString.Value, nil
 		}
 	}
-	return NOT_FILTERED, "", nil
+	return NO_FILTERING, "", nil
 }

@@ -111,6 +111,7 @@ var checkBlockingCmd = &cobra.Command{
 				HTTPStatusCode: result.HTTPStatusCode,
 				HTMLTitle:      result.HTMLTitle,
 				HTMLBodyLength: result.HTMLBodyLength,
+				FilteringType:  result.Code,
 				ValidatorMsg:   result.Msg,
 			}
 			if result.Error != nil {
@@ -133,7 +134,7 @@ var checkBlockingCmd = &cobra.Command{
 				HTTPFiltered = append(HTTPFiltered, result.URL)
 			case SNI_FILTERING:
 				SNIFiltered = append(SNIFiltered, result.URL)
-			case NOT_FILTERED:
+			case NO_FILTERING:
 				record.Accessible = true
 				accessible = append(accessible, result.URL)
 			case CONN_UNKNOWN:
