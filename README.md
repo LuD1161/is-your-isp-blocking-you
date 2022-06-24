@@ -30,9 +30,13 @@ TODO
 - [x] Replace http client with retryable http client - https://github.com/hashicorp/go-retryablehttp
 - [x] Keep in DB stats for last run, like : 1. Scan Time 2. Domains scanned 3. Accessible, Non-accessible, blocked, connection timed out domains 4. Location 5. ISP 6. Evil or not 7. Time of scan 8. Type of filtering
 - [x] Save all data as base64 encoded into file.
-- [ ] Create an un-censored source of truth.
-- [ ] Check with some un-censored source of truth.
+- [x] Check DNS Filtering.
+- [ ] Add different ISPs from India and world. Airtel, JIO, ACT, Hathaway, Tata, Vodafone etc.
+- [ ] Save results with Folder and list as well. Upload to Github.
 - [ ] Add `goreleaser` to automatically publish new version
+- [ ] Create an un-censored source of truth.
+- [ ] Corroborate data with some un-censored source of truth.
+- [ ] Option to just check for a particular type of filtering like DNS , HTTP, SNI etc
 - [ ] Can check for `www` subdomain, where the answer to a `GET` request is `no such host`.
 - [ ] **Better Blocking Check** : Can check if page is blocked by checking similarity from a non-blocked source ( like a s3 bucket that saves the pages daily ) ?
 - [ ] Try out bypasses for common techniques. Keep this as an option in the cli tool.
