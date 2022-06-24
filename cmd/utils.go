@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -69,10 +70,20 @@ func MakeRequest(urlsChan <-chan string, responseChan chan<- ValidatorData, cust
 
 	for url := range urlsChan {
 		result := ValidatorData{
-			URL:      url,
-			Response: http.Response{},
-			Err:      nil,
+			URL:         url,
+			Response:    http.Response{},
+			Err:         nil,
+			ResolvedIPs: "",
 		}
+		ResolvedIPs, err := GetIPs(url)
+		// if no IPs are resolved then skip sending requests, retrying and waiting for timeout
+		if err != nil {
+			log.Error().Msgf("Error resolving IPs : %s", err.Error())
+			result.Err = err
+			responseChan <- result
+			continue
+		}
+		result.ResolvedIPs = ResolvedIPs
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			result.Err = err
@@ -99,11 +110,13 @@ func ValidateResponse(responseChan <-chan ValidatorData, resultsChan chan<- Resu
 		result := Result{
 			Code:           "",
 			URL:            response.URL,
+			Msg:            "",
 			Data:           "",
 			HTTPStatusCode: 0,
 			HTMLTitle:      "",
 			HTMLBodyLength: 0,
 			Error:          response.Err,
+			ResolvedIPs:    response.ResolvedIPs,
 		}
 		var body []byte
 		err := response.Err
@@ -211,6 +224,8 @@ func SetProxyTransport() *http.Transport {
 			}
 			proxyTransport.Proxy = http.ProxyURL(proxy)
 			log.Info().Msgf("Proxy set in http.transport : %s", proxyURL)
+		} else {
+			log.Error().Msgf("run_through_proxy set but No PROXY_URL specified. Hence, no proxy set in http.transport.")
 		}
 	} else {
 		log.Info().Msgf("No PROXY_URL specified. Hence, no proxy set in http.transport.")
@@ -247,4 +262,22 @@ func GetHTMLTitle(body string) string {
 			}
 		}
 	}
+}
+
+func GetIPs(url string) (string, error) {
+	url = strings.Replace(url, "http://", "", -1)
+	url = strings.Replace(url, "https://", "", -1)
+	var dataArr []string
+	var data string
+	ips, err := net.LookupIP(url)
+	if err != nil {
+		return data, err
+	}
+	for _, ip := range ips {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			dataArr = append(dataArr, ipv4.String())
+		}
+	}
+	data = strings.Join(dataArr, ",")
+	return data, err
 }

@@ -100,6 +100,7 @@ var checkBlockingCmd = &cobra.Command{
 				Model:          gorm.Model{},
 				ScanId:         scanId,
 				Website:        result.URL,
+				ResolvedIPs:    result.ResolvedIPs,
 				ISP:            ispResult.AsnOrg,
 				Country:        ispResult.Country,
 				Location:       ispResult.City,
@@ -115,7 +116,7 @@ var checkBlockingCmd = &cobra.Command{
 				ValidatorMsg:   result.Msg,
 			}
 			if result.Error != nil {
-				if i%10000 == 0 {
+				if i%1000 == 0 {
 					log.Debug().Msgf("✅ URLs done : %d", i)
 					log.Error().Msgf("Error : %s", result.Error.Error())
 				}

@@ -11,6 +11,7 @@ type Record struct {
 	ScanId         string  `gorm:"size:255;not null;" json:"scan_id"`
 	Website        string  `gorm:"size:255;not null;" json:"website"`
 	ISP            string  `gorm:"size:255;not null;" json:"isp"`
+	ResolvedIPs    string  `gorm:"size:255;not null;" json:"resolved_ips"`
 	Country        string  `gorm:"size:255;not null;" json:"country"`
 	Location       string  `gorm:"size:255;" json:"location"`
 	Latitude       float64 `gorm:"size:255;" json:"latitude"`
@@ -34,6 +35,7 @@ type Result struct {
 	HTMLTitle      string
 	HTMLBodyLength int
 	Error          error
+	ResolvedIPs    string
 }
 
 type ScanStats struct {
@@ -73,9 +75,10 @@ type IfConfigResponse struct {
 }
 
 type ValidatorData struct {
-	URL      string
-	Response http.Response
-	Err      error
+	URL         string
+	Response    http.Response
+	Err         error
+	ResolvedIPs string
 }
 
 type FilterObj struct {
@@ -87,10 +90,7 @@ type FilterObj struct {
 	Comment   string `yaml:"Comment"`
 }
 type FilteringYAML struct {
-	DNSFILTERING struct {
-		CNAME []FilterObj `yaml:"CNAME"`
-		IP    []FilterObj `yaml:"IP"`
-	} `yaml:"DNS_FILTERING"`
+	DNSFILTERING  []FilterObj `yaml:"DNS_FILTERING"`
 	HTTPFILTERING struct {
 		Body []FilterObj `yaml:"Body"`
 		URL  []FilterObj `yaml:"URL"`

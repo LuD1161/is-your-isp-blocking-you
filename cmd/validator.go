@@ -35,6 +35,13 @@ func (v *Validator) Validate(data ValidatorData) (string, string, error) {
 	}
 
 	log.Debug().Msgf("URL : %s | Error : %+v", finalURL, data.Err)
+
+	// Check DNS Filtering
+	filtering, msg, err := v.CheckDNSFiltering(data.ResolvedIPs)
+	if filtering != NO_FILTERING { // if no filtering then return from here. No need to check for HTTP or SNI filtering.
+		return filtering, msg, err
+	}
+
 	// Method 1 : Check PR_CONNECTION_RESET first
 	// TODO: Check with some un-censored source of truth. Fetch from database.
 	if data.Err != nil && strings.Contains(data.Err.Error(), "connection reset by peer") {
@@ -67,6 +74,19 @@ func (v *Validator) CheckHTTPFiltering(bodyReader io.ReadCloser) (string, string
 	for _, blockedString := range fYaml.HTTPFILTERING.Body {
 		if strings.Contains(string(body), blockedString.Value) {
 			return HTTP_FILTERING, blockedString.Value, nil
+		}
+	}
+	return NO_FILTERING, "", nil
+}
+
+func (v *Validator) CheckDNSFiltering(resolvedIPS string) (string, string, error) {
+	for _, blacklistedIP := range fYaml.DNSFILTERING {
+		ips := strings.Split(resolvedIPS, ",")
+		for _, ip := range ips {
+			if ip == blacklistedIP.Value {
+				validatorMsg := fmt.Sprintf("%s : %s", blacklistedIP.ISP, blacklistedIP.Value)
+				return DNS_FILTERING, validatorMsg, nil
+			}
 		}
 	}
 	return NO_FILTERING, "", nil

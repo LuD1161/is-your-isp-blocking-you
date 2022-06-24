@@ -1,19 +1,17 @@
 ---
 DNS_FILTERING:
-  CNAME:
-    - Value: www.airtel.in/dot/
-      country: IN
-      ISP: ''
-      ASN: ''
-      Reference: ''
-      Comment: ''
-  IP:
     - Value: "13.127.247.216"
       country: IN
       ISP: ''
       ASN: ''
       Reference: ''
       Comment: ''
+    - Value: "134.122.110.90"
+      country: IN
+      ISP: 'TTSL-ISP DIVISION'
+      ASN: 'AS55441'
+      Reference: 'dig @103.8.45.5 cloudy.pk'
+      Comment: 'Tata Tele Services Limited, blocks on DNS level. Using 134.122.110.90 as a sinkhole.'
 HTTP_FILTERING:
   Body:
     - Value: www.airtel.in/dot/
@@ -22,6 +20,24 @@ HTTP_FILTERING:
       ASN: AS24560
       Reference: Blocked on http://123movies.co
       Comment: "Airtel does HTTP FIltering and adds a meta tag with iframe as www.airtel.in/dot/ , which serves the Department of Telecom's (DoT) notice."
+    - Value: http://14.141.123.218:8080/webadmin/deny/index.php
+      country: IN
+      ISP: ACTFIBERNET Pvt Ltd
+      ASN: AS24560
+      Reference: Blocked on http://free.fr
+      Comment: "ACT does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
+    - Value: "The URL has been blocked as per the instructions of the"
+      country: IN
+      ISP: ACTFIBERNET Pvt Ltd
+      ASN: AS24560
+      Reference: Blocked on http://onlinewatchtv.net
+      Comment: "ACT does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
+    - Value: "The URL has been blocked as per the instructions of the"
+      country: IN
+      ISP: TATA SKY BROADBAND PRIVATE LIMITED
+      ASN: AS24560
+      Reference: Blocked on http://djdunia24.in/
+      Comment: "Tata does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
   URL:
     - Value: www.airtel.in/dot/
       country: IN
