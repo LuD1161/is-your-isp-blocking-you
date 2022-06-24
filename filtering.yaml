@@ -19,25 +19,19 @@ HTTP_FILTERING:
       ISP: Bharti Airtel
       ASN: AS24560
       Reference: Blocked on http://123movies.co
-      Comment: "Airtel does HTTP FIltering and adds a meta tag with iframe as www.airtel.in/dot/ , which serves the Department of Telecom's (DoT) notice."
+      Comment: "Airtel does HTTP Filtering and adds a meta tag with iframe as www.airtel.in/dot/ , which serves the Department of Telecom's (DoT) notice."
     - Value: http://14.141.123.218:8080/webadmin/deny/index.php
       country: IN
-      ISP: ACTFIBERNET Pvt Ltd
+      ISP: ACTFIBERNET Pvt Ltd, TTSL-ISP DIVISION AS55441
       ASN: AS24560
-      Reference: Blocked on http://free.fr
-      Comment: "ACT does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
+      Reference: Blocked on http://free.fr , http://bingtorrent.com
+      Comment: "ACT, TATA Tele Services (checked at Starbucks Indiranagar, Bengaluru) does HTTP Filtering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
     - Value: "The URL has been blocked as per the instructions of the"
       country: IN
-      ISP: ACTFIBERNET Pvt Ltd
+      ISP: ACTFIBERNET Pvt Ltd, TATA SKY BROADBAND PRIVATE LIMITED
       ASN: AS24560
-      Reference: Blocked on http://onlinewatchtv.net
-      Comment: "ACT does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
-    - Value: "The URL has been blocked as per the instructions of the"
-      country: IN
-      ISP: TATA SKY BROADBAND PRIVATE LIMITED
-      ASN: AS24560
-      Reference: Blocked on http://djdunia24.in/
-      Comment: "Tata does HTTP FIltering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
+      Reference: Blocked on http://onlinewatchtv.net, http://djdunia24.in/
+      Comment: "ACT, TATA Sky Broadband does HTTP Filtering and adds a meta tag with iframe as http://14.141.123.218:8080/webadmin/deny/index.php, which serves the Department of Telecom's (DoT) notice."
   URL:
     - Value: www.airtel.in/dot/
       country: IN
