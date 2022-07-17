@@ -5,8 +5,9 @@ Copyright © 2022 Aseem Shrey
 package cmd
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
@@ -46,11 +47,15 @@ func Execute() {
 }
 
 func init() {
-	b, err := ioutil.ReadFile("./cmd/banner.txt")
+	bannerStr, err := base64.StdEncoding.DecodeString(banner)
 	if err != nil {
-		panic(err)
+		log.Error().Msgf("Can't print banner : %s", err)
 	}
-	fmt.Println(string(b))
+	fmt.Printf("%s\n", bannerStr)
+	// Check if filtering.yaml exists, if not exit.
+	if _, err := os.Stat("filtering.yaml"); errors.Is(err, os.ErrNotExist) {
+		log.Fatal().Msgf("filtering.yaml does not exist. Exiting.")
+	}
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")

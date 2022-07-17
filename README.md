@@ -31,11 +31,11 @@ TODO
 - [x] Keep in DB stats for last run, like : 1. Scan Time 2. Domains scanned 3. Accessible, Non-accessible, blocked, connection timed out domains 4. Location 5. ISP 6. Evil or not 7. Time of scan 8. Type of filtering
 - [x] Save all data as base64 encoded into file.
 - [x] Check DNS Filtering.
-- [ ] Add different ISPs from India and world. Airtel, JIO, ACT, Hathaway, Tata, Vodafone etc.
+- [ ] Add data from different ISPs from India and world. Airtel, JIO, ACT, Hathaway, Tata, Vodafone etc.
 - [ ] Save results with Folder and list as well. Upload to Github.
 - [ ] Add `goreleaser` to automatically publish new version
 - [ ] Create an un-censored source of truth.
-- [ ] Corroborate data with some un-censored source of truth.
+- [ ] Corroborate data with some un-censored source of truth to be sure of filtering. One way I propose is to use similarity detection by HTML tree.
 - [ ] Option to just check for a particular type of filtering like DNS , HTTP, SNI etc
 - [ ] Can check for `www` subdomain, where the answer to a `GET` request is `no such host`.
 - [ ] **Better Blocking Check** : Can check if page is blocked by checking similarity from a non-blocked source ( like a s3 bucket that saves the pages daily ) ?
@@ -43,16 +43,15 @@ TODO
 - [ ] Run multiple times, to avoid flaky results
 - [ ] Decide number of goroutines on the basis of internet connection. A low bandwidth connection will get choked and all websites' will get timed out. Also timeout should be decided on this basis. Can use [speedtest-go](https://github.com/showwin/speedtest-go).
 - [ ] Keep unique domains in the list to scan and remove subdomains - Currently 264k unique domains. Takes ~1330 seconds on a ~200Mbps internet connection with 15 second timeout and 3 retries. Try to get this to max 100k domains
-- [ ] Optimise DB connections : https://gorm.io/docs/generic_interface.html#Connection-Pool
 
 ## ToDo CLI :
 - [x] Add `proxy` support to run checks for different ISPs anywhere in the world.
 - [x] Based on country automatically choose the list from `citizenlabs`.
 - [x] Option to save stats in DB - sqlite, postgres etc.
-- [ ] `debug` option to print all data like which websites were `blocked`, `inaccessible`, `accessible` etc.
-- [ ] When choosing `cisco` list warn people about the bandwidth usage and how much data + time it might consume.
+- [x] `debug` option to print all data like which websites were `blocked`, `inaccessible`, `accessible` etc.
+- [x] Check DNS filtering using `net.LookupIP` or server IP from the request's response .
 - [ ] Update `README` with the way it is being checked. Mentioning each of the block strategies and how different ISPs are using it. How the tool is checking these ?
-- [ ] Check DNS filtering using `net.LookupIP` or server IP from the request's response .
+- [ ] When choosing `cisco` list warn people about the bandwidth usage and how much data + time it might consume.
 
 ## ToDo Server :
 - [ ] Create a serverless lambda to send data to.
