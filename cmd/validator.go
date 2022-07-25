@@ -7,28 +7,13 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
 )
 
 type Validator struct{}
 
-var (
-	fYaml FilteringYAML
-)
-
 func (v *Validator) Validate(data ValidatorData) (string, string, error) {
 	resp := data.Response
 	finalURL := ""
-
-	// Read filtering.yaml to load all filters
-	yfile, err := ioutil.ReadFile("filtering.yaml")
-	if err != nil {
-		return OTHER_ERROR, "", fmt.Errorf("error parsing filtering.yaml : %s", err.Error())
-	}
-
-	if err := yaml.Unmarshal(yfile, &fYaml); err != nil {
-		return OTHER_ERROR, "", fmt.Errorf("error parsing filtering.yaml : %s", err.Error())
-	}
 
 	if data.Err == nil {
 		finalURL = resp.Request.URL.String()

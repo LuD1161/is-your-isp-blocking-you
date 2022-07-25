@@ -6,8 +6,8 @@ package cmd
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"
 )
@@ -52,10 +53,17 @@ func init() {
 		log.Error().Msgf("Can't print banner : %s", err)
 	}
 	fmt.Printf("%s\n", bannerStr)
-	// Check if filtering.yaml exists, if not exit.
-	if _, err := os.Stat("filtering.yaml"); errors.Is(err, os.ErrNotExist) {
-		log.Fatal().Msgf("filtering.yaml does not exist. Exiting.")
+
+	// Read filtering.yaml to load all filters
+	yfile, err := ioutil.ReadFile("filtering.yaml")
+	if err != nil {
+		log.Fatal().Msgf("error parsing filtering.yaml : %s", err.Error())
 	}
+
+	if err := yaml.Unmarshal(yfile, &fYaml); err != nil {
+		log.Fatal().Msgf("error parsing filtering.yaml : %s", err.Error())
+	}
+
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "t", 100, "No of threads")
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "", 15, "Timeout for requests")
